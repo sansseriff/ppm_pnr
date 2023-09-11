@@ -8,24 +8,25 @@
 \articletype{Research Article}
 
 \usepackage{lineno}
+\usepackage{todonotes}
 \linenumbers % Turn off line numbering for Optica Open preprint submissions.
 
 \begin{document}
 
 \title{Data Recovery and Pulse Position Modulation with a Photon Number Resolving SNSPD}
 
-\author{Author One,\authormark{1} Author Two,\authormark{2,*} and Author Three\authormark{2,3}}
+\author{Andrew Mueller\authormark{1, 2, *}, Boris Korzh\authormark{2}, Emma E. Wollman\authormark{2}, Ioana Craiciu\authormark{2}, Andrew D. Beyer\authormark{2}, Makan Mohageg\authormark{2}, {Lautaro Narv\'aez}\authormark{3},  Maria Spiropulu\authormark{3}, Matthew D. Shaw\authormark{2}}
 
-\address{\authormark{1}Peer Review, Publications Department, Optica Publishing Group, 2010 Massachusetts Avenue NW, Washington, DC 20036, USA\\
-\authormark{2}Publications Department, Optica Publishing Group, 2010 Massachusetts Avenue NW, Washington, DC 20036, USA\\
-\authormark{3}Currently with the Department of Electronic Journals, Optica Publishing Group, 2010 Massachusetts Avenue NW, Washington, DC 20036, USA}
 
-\email{\authormark{*}opex@optica.org} %% email address is required; see note below about the corresponding author designation
+\address{\authormark{1}Applied Physics, California Institute of Technology, 1200 E California Blvd., Pasadena, CA, 91125, USA \\
+\authormark{2}Jet Propulsion Laboratory, California Institute of Technology, 4800 Oak Grove Dr., Pasadena, CA, 91109, USA\\
+\authormark{3}Division of Physics, Mathematics and Astronomy, California Institute of Technology, 1200 E California Blvd., Pasadena, CA 91125, USA}
 
-% use {asbstract*} to suppress the copyright line. Copyright information will be added in production
+\email{\authormark{*}amueller@caltech.edu} %% email address is required; see note below about the corresponding author designation
+
 
 \begin{abstract*} 
-Photon number resolution is an emerging capability of advanced Superconducting Nanowire Single Photon Detectors. If leveraged to it's full potential, PNR capabilty can have a profound impact on the usefulness of SNSPDs is certain quantum applications including linear optical quantum computing, quantum networks, and quantum sensing. Discrimination of not just the number of photons in an optical pulse but also pulse arrival time with high accuracy is an open problem, complicated by the nuanced way in which these two degrees of freedom are intertwined in the response function of these detectors. In this work we put a differential readout SNSPD to the ultimate test. We test it's capabilities in a Pulse Position Modulation experiment whereby data is sent in the arrival time of optical pulses derived from a 20~GHz optical clock. We show the detector is capable of discriminating the arrival time of photons to 50~ps wide bins with high accuracy while simultaneously providing photon number information about the impinging optical pulses. We find that a careful statistical analysis of the PNR response is necessary to back-out a precise measurement of pulse arrival time.
+Photon number resolution is an emerging capability of advanced Superconducting Nanowire Single Photon Detectors. If leveraged to it's full potential, PNR capability can have a profound impact on the utility of SNSPDs in certain quantum applications including linear optical quantum computing, quantum networks, and quantum sensing. Discrimination of not just photon number but also pulse arrival time with high accuracy is an open problem, complicated by the nuanced way in which these two degrees of freedom are intertwined in the response function of these detectors. In this work we test a PNR detector's response in a Pulse Position Modulation (PPM) experiment whereby classical data is sent in the arrival time of optical pulses derived from a 20~GHz optical clock. We show the detector is capable of discriminating the arrival time of photons to 50~ps wide bins with high accuracy while simultaneously providing photon number information about the impinging optical pulses. We find that a careful statistical analysis of the PNR response is necessary to back-out a precise measurement of pulse arrival time and photon number.
 \end{abstract*}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%  body  %%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -33,7 +34,7 @@ Photon number resolution is an emerging capability of advanced Superconducting N
 \section{Introduction}\label{introduction}}
 
 \textcolor{red}{ The following is very rough, taken from years ago when I first started writing the manuscript }
-This study aimed to evaluate the feasibility of transmitting high clock-rate pulse position modulated (PPM) data using a mode-locked laser and receiving it with a low jitter superconducting nanowire single-photon detector (SNSPD). The investigation was driven by recent advancements in NbN SNSPDs, which have achieved a jitter as low as 50 ps at the FW(1/100)M level, enabling the demonstration of PPM with 50 ps slot widths and a 20 GHz clock. The aim was to increase the data rate by a factor of 10, from 2 GHz to 20 GHz, in the next generation of the Deep Space Optical Communication (DSOC) project.
+This study aimed to evaluate the feasibility of transmitting high clock-rate PPM data using a mode-locked laser and receiving it with a low jitter superconducting nanowire single-photon detector (SNSPD). The investigation was driven by recent advancements in NbN SNSPDs, which have achieved a jitter as low as 50 ps at the FW(1/100)M level, enabling the demonstration of PPM with 50 ps slot widths and a 20 GHz clock. The aim was to increase the data rate by a factor of 10, from 2 GHz to 20 GHz, in the next generation of the Deep Space Optical Communication (DSOC) project.
 
 During the course of this study, the focus shifted towards investigating the impact of photon number resolution (PNR) on the low jitter detection of optical pulses. PNR can have an unintended impact on the demonstration of high-rate PPM, and therefore a thorough study of its effects was deemed crucial. A novel PNR cancellation technique was developed and applied to successfully demonstrate high-rate PPM. This technique is considered essential for future low-jitter applications of SNSPDs that exhibit photon-number effects.
 
@@ -70,6 +71,39 @@ In our experiment, the 20 GHz repetition rate was limited by the jitter of the S
 Carving a CW laser with our system would have introduced excessive timing uncertainty due to the limited ability of even the fastest lithium niobate intensity modulators to carve pulses with widths below 20 ps. The added jitter from modulated CW pulses, combined with the jitter of the detectors, would have exceeded the 20 GHz/50 ps slot width requirement.
 
 Therefore, we chose to carve pulses from a mode-locked laser. This approach allows for extremely short pulses in time, with the modulators responsible for sufficiently reducing any surrounding unwanted pulses. The temporal width of the modulator pulse response must be extremely short and able to modulate from `off' to `on' within a time frame of the order of the 50 ps bin width.
+
+\hypertarget{Detector metrics for high-rate photon detection}{%
+\section{Detector figure of merit}
+\label{fom}}
+
+The work here highlights the application of low jitter single-photon detectors for optical communication, which is impactful for deep-space optical communication as well as classical communication in quantum networks. Although single-photon counting is well estanblished for deep-space optical communication~\cite{Laser lunar, DSOC} so far it has not been ulitized in quantum networks, mainly due to the use of SFP modules and DWDMs. However, with the eachievement of high data rates recently achieved with photon-counting classical communication, these approaches can now be seriously considered for quantum networks. The main driver is would be the deduction of optical power in neighbouring DWDM channels, which ultimately lowers the Raman scattered photons into the quantum channel~\cite{EraerdsRaman}
+\todo[inline]{Calculate reduction in power from state of the art SFP modules}
+
+To access the applicability of different detectors, here we compare some of the recent near infrared detectors. 
+
+A useful figure of merit that includes all of the revelant detector metrics for photon timing was introduced by Bronzi and co-authors\cite{Bronzi2016}
+
+$$FoM_T = \frac{\eta  (1 - P_{ap})\Phi_{-3 \text{dB}}}{J} \sqrt{\frac{A}{D}},$$
+
+where $\eta$ is the single photon detection efficiency, $\Phi_{-3 \text{dB}}$ is the photon flux at which the system detection efficiency drops by 3~dB, $P_{ap}$ is the afterpulsing probability, $J$ is the detector jitter evaluated as the FWHM, $T_d$ is the deadtime, $A$ is the active area and $D$ is the dark count rate. Here we have defined the maximum photon flux as the 3~dB point, for ease of standardization.
+
+In this work:
+\begin{itemize}
+    \item Efficiency = 0.84
+    \item Afterpulsing = 0 \%
+    \item Jitter = 15 ps
+    \item Deadtime = 30 ns \todo[inline]{measure 3dB flux}
+    \item Area = 330 $\mu m^2$
+    \item Dark count rate = 20 Hz
+\end{itemize}
+$FoM_T = 7.58 \times 10^{12}$ at 1550 nm.
+
+The deadtime is calculated as the 1/MCR, which is the 3 dB point of the nominal efficiency. This is only a factor of 3.7 less than the state of the art visible Silicon SPADs (peak efficiency at 480~nm) ~\cite{Gramuglia2022}.
+
+In the future, the performance of the optical communication system could be improved by using, high count rate SNSPD arrays. Recently published high-count rate arrays have figures of merit of \todo[inline]{$FoM_T$ for Peacoq and Resta2023 results}. This would result a proportinal increase in the data rate.
+\todo[inline]{$FoM_T$ for fastest InGaAs/InP gated detector}.
+These devices are ideal for fiber-based optical communication. In free-space, the active area is especially important, whithout the use of an adaptive optics system.
+\todo[inline]{$FoM_T$ for DSOC array}.
 
 \hypertarget{methods}{%
 \section{Methods}\label{methods}}
