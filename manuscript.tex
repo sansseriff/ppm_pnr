@@ -39,11 +39,11 @@ Deep Space Optical Communication has been a growing field of study in recent yea
 
 In this article, we will focus on the use of Pulse Position Modulation (PPM) for deep space optical communication. PPM can achieve higher photon information efficiency than coherent detection techniques {[}cite a method here, like is QAM one of them? See dolinar paper{]} for which the need to measure phase of the incoming optical signal limits minimum transmission power.
 
-PPM involves sending an optical pulse in one of \(2^M\) possible time slots. The transmissio of each such pulse carries M bits of information.
+PPM involves sending an optical pulse in one of $2^M$ possible time slots. The transmissio of each such pulse carries M bits of information.
 
-For larger M, more data may be sent with a single optical pulse, thereby allowing a spacecrat to that is severely power limited to send more data over a high loss optical channel back to earth. The Deep Space Optical Communicaiton project managed by the Jet Propulsion Laboratory (JPL) aims to demonstrate optical communication using PPM with the Psyche spacecraft from distances of \textbf{\hl{XX to XX}} Au..
+For larger M, more data may be sent with a single optical pulse, thereby allowing a spacecrat to that is severely power limited to send more data over a high loss optical channel back to earth. The Deep Space Optical Communicaiton project managed by the Jet Propulsion Laboratory (JPL) aims to demonstrate optical communication using PPM with the Psyche spacecraft from distances of \textbf{\hl{XX to XX}}Au.
 
-For large M, PPM achieves high photon information efficiency, allowing for the saving of power on the spacecraft and the sending of more information with fewer photons. The existing deep space optical communication project uses M up to \(2^8 = 256\), meaning that 8 bits of data are carried in each optical pulse.
+For large M, PPM achieves high photon information efficiency, allowing for the saving of power on the spacecraft and the sending of more information with fewer photons. The existing deep space optical communication project uses M up to $2^8 = 256$, meaning that 8 bits of data are carried in each optical pulse.
 
 In this project, we aimed to demonstrate even higher photon information efficiency by using M values up to 2048, or 11 bits of data per optical pulse.
 
@@ -64,7 +64,7 @@ During the course of this study, the focus shifted towards investigating the imp
 \end{figure}
 }
 
-PPM relies on sending one optical pulse carrying M bits of information in one of \(2^M\) possible time slots. For M = 2, this corresponds to sending an early pulse to represent a 0 bit and a late pulse to represent a 1 bit.
+PPM relies on sending one optical pulse carrying M bits of information in one of $2^M$ possible time slots. For M = 2, this corresponds to sending an early pulse to represent a 0 bit and a late pulse to represent a 1 bit.
 
 \hypertarget{section}{%
 \section{--------------------}\label{section}}
@@ -88,9 +88,9 @@ To access the applicability of different detectors, here we compare some of the 
 
 A useful figure of merit that includes all of the revelant detector metrics for photon timing was introduced by Bronzi and co-authors \cite{Bronzi2016}
 
-\[FoM_T = \frac{\eta  (1 - P_{ap})\Phi_{-3 \text{dB}}}{J} \sqrt{\frac{A}{D}},\]
+$$FoM_T = \frac{\eta  (1 - P_{ap})\Phi_{-3 \text{dB}}}{J} \sqrt{\frac{A}{D}},$$
 
-where \(\eta\) is the single photon detection efficiency, \(\Phi_{-3 \text{dB}}\) is the photon flux at which the system detection efficiency drops by 3\textasciitilde dB, \(P_{ap}\) is the afterpulsing probability, \(J\) is the detector jitter evaluated as the FWHM, \(T_d\) is the deadtime, \(A\) is the active area and \(D\) is the dark count rate. Here we have defined the maximum photon flux as the 3\textasciitilde dB point, for ease of standardization.
+where $\eta$ is the single photon detection efficiency, $\Phi_{-3 \text{dB}}$ is the photon flux at which the system detection efficiency drops by 3\textasciitilde dB, $P_{ap}$ is the afterpulsing probability, $J$ is the detector jitter evaluated as the FWHM, $T_d$ is the deadtime, $A$ is the active area and $D$ is the dark count rate. Here we have defined the maximum photon flux as the 3\textasciitilde dB point, for ease of standardization.
 
 In this work:
 
@@ -105,19 +105,19 @@ In this work:
 \item
   Deadtime = 30 ns \textcolor{red}{measure 3dB flux}
 \item
-  Area = 330 \(\mu m^2\)
+  Area = 330 $\mu m^2$
 \item
   Dark count rate = 20~Hz
 \end{itemize}
 
-\(FoM_T = 7.58 \times 10^{12}\) at 1550 nm.
+$FoM_T = 7.58 \times 10^{12}$ at 1550 nm.
 
 The deadtime is calculated as the 1/MCR, which is the 3 dB point of the nominal efficiency. This is only a factor of 3.7 less than the state of the art visible Silicon SPADs (peak efficiency at 480\nm) \cite{Gramuglia2022}
 
-In the future, the performance of the optical communication system could be improved by using, high count rate SNSPD arrays. Recently published high-count rate arrays have figures of merit of \textcolor{red}{\(FoM_T\) for Peacoq and Resta2023 results}. This would result in a proportinal increase in the data rate.
-\textcolor{red}{\(FoM_T\) for fastest InGaAs/InP gated detector}
+In the future, the performance of the optical communication system could be improved by using, high count rate SNSPD arrays. Recently published high-count rate arrays have figures of merit of \textcolor{red}{$FoM_T$ for Peacoq and Resta2023 results}. This would result in a proportinal increase in the data rate.
+\textcolor{red}{$FoM_T$ for fastest InGaAs/InP gated detector}
 These devices are ideal for fiber-based optical communication. In free-space, the active area is especially important, whithout the use of an adaptive optics system.
-\textcolor{red}{\(FoM_T\) for DSOC array}
+\textcolor{red}{$FoM_T$ for DSOC array}
 
 \hypertarget{development-of-a-modulation-source}{%
 \subsection{Development of a modulation source}\label{development-of-a-modulation-source}}
@@ -140,7 +140,7 @@ Therefore, we chose to carve pulses from a mode-locked laser. This approach allo
 \begin{figure}
 \centering
 \includegraphics[width=0.75\textwidth]{./figs_03/slope_cancellation_light.pdf}
-\caption[{PNR Slope Variation Analysis and Cancellation}]{\textbf{PNR Slope Variation Analysis and Cancellation} a) 2D histogram of RF pulse measurements. Through graphing slope \(\Delta t_{BA}\) on the x-axis and arrival time \(t_A\) on the y-axis, a series of groupings are visible that identify the discrete photon numbers detected.}
+\caption[{PNR Slope Variation Analysis and Cancellation}]{\textbf{PNR Slope Variation Analysis and Cancellation} a) 2D histogram of RF pulse measurements. Through graphing slope $\Delta t_{BA}$ on the x-axis and arrival time $t_A$ on the y-axis, a series of groupings are visible that identify the discrete photon numbers detected.}
 \label{fig:slope-correction}
 \end{figure}
 }
