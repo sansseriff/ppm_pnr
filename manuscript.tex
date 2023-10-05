@@ -41,7 +41,10 @@ In this article, we will focus on the use of Pulse Position Modulation (PPM) for
 
 PPM involves sending an optical pulse in one of $2^M$ possible time slots. The transmissio of each such pulse carries M bits of information.
 
-For larger M, more data may be sent with a single optical pulse, thereby allowing a spacecrat to that is severely power limited to send more data over a high loss optical channel back to earth. The Deep Space Optical Communicaiton project managed by the Jet Propulsion Laboratory (JPL) aims to demonstrate optical communication using PPM with the Psyche spacecraft from distances of \textbf{\hl{XX to XX}}Au.
+For larger M, more data may be sent with a single optical pulse, thereby allowing a spacecrat to that is severely power limited to send more data over a high loss optical channel back to earth. The Deep Space Optical Communicaiton project managed by the Jet Propulsion Laboratory (JPL) aims to demonstrate optical communication using PPM with the Psyche spacecraft from distances of \textbf{\hl{XX to XX}} Au.
+
+\hypertarget{section}{%
+\paragraph{----}\label{section}}
 
 For large M, PPM achieves high photon information efficiency, allowing for the saving of power on the spacecraft and the sending of more information with fewer photons. The existing deep space optical communication project uses M up to $2^8 = 256$, meaning that 8 bits of data are carried in each optical pulse.
 
@@ -66,8 +69,8 @@ During the course of this study, the focus shifted towards investigating the imp
 
 PPM relies on sending one optical pulse carrying M bits of information in one of $2^M$ possible time slots. For M = 2, this corresponds to sending an early pulse to represent a 0 bit and a late pulse to represent a 1 bit.
 
-\hypertarget{section}{%
-\section{--------------------}\label{section}}
+\hypertarget{section-1}{%
+\section{--------------------}\label{section-1}}
 
 \hypertarget{fig:waveform}{%
 \begin{figure}
@@ -82,7 +85,7 @@ PPM relies on sending one optical pulse carrying M bits of information in one of
 \section{Detector Figure of Merit}\label{detector-figure-of-merit}}
 
 The work here highlights the application of low jitter single-photon detectors for optical communication, which is impactful for deep-space optical communication as well as classical communication in quantum networks. Although single-photon counting is well estanblished for deep-space optical communication\textasciitilde{}\cite{Laser lunar, DSOC} so far it has not been ulitized in quantum networks, mainly due to the use of SFP modules and DWDMs. However, with the eachievement of high data rates recently achieved with photon-counting classical communication, these approaches can now be seriously considered for quantum networks. The main driver is would be the deduction of optical power in neighbouring DWDM channels, which ultimately lowers the Raman scattered photons into the quantum channel \cite{EraerdsRaman}
-\textcolor{red}{Calculate reduction in power from state of the art SFP modules}
+\textbf{\hl{Calculate reduction in power from state of the art SFP modules}}
 
 To access the applicability of different detectors, here we compare some of the recent near infrared detectors.
 
@@ -103,7 +106,7 @@ In this work:
 \item
   Jitter = 15 ps
 \item
-  Deadtime = 30 ns \textcolor{red}{measure 3dB flux}
+  Deadtime = 30 ns \textbf{\hl{measure 3dB flux}}
 \item
   Area = 330 $\mu m^2$
 \item
@@ -112,12 +115,12 @@ In this work:
 
 $FoM_T = 7.58 \times 10^{12}$ at 1550 nm.
 
-The deadtime is calculated as the 1/MCR, which is the 3 dB point of the nominal efficiency. This is only a factor of 3.7 less than the state of the art visible Silicon SPADs (peak efficiency at 480\nm) \cite{Gramuglia2022}
+The deadtime is calculated as the 1/MCR, which is the 3 dB point of the nominal efficiency. This is only a factor of 3.7 less than the state of the art visible Silicon SPADs (peak efficiency at 480~nm) \cite{Gramuglia2022}
 
-In the future, the performance of the optical communication system could be improved by using, high count rate SNSPD arrays. Recently published high-count rate arrays have figures of merit of \textcolor{red}{$FoM_T$ for Peacoq and Resta2023 results}. This would result in a proportinal increase in the data rate.
-\textcolor{red}{$FoM_T$ for fastest InGaAs/InP gated detector}
+In the future, the performance of the optical communication system could be improved by using, high count rate SNSPD arrays. Recently published high-count rate arrays have figures of merit of \textbf{\hl{$FoM_T$ for Peacoq and Resta2023 results}}. This would result in a proportinal increase in the data rate.
+\textbf{\hl{$FoM_T$ for fastest InGaAs/InP gated detector}}
 These devices are ideal for fiber-based optical communication. In free-space, the active area is especially important, whithout the use of an adaptive optics system.
-\textcolor{red}{$FoM_T$ for DSOC array}
+\textbf{\hl{$FoM_T$ for DSOC array}}
 
 \hypertarget{development-of-a-modulation-source}{%
 \subsection{Development of a modulation source}\label{development-of-a-modulation-source}}
