@@ -52,14 +52,7 @@ We focus on demonstrating moderately large PIE, while also increasing the clock 
 The increase in clock rate is made possible due to recent advancements in Niobium Nitride SNSPDs\textasciitilde{}\cite{Colangelo2023}. Low jitter performance is achieved by incorporating impedance matching tapers for efficient RF coupling, resulting in higher slew rate pulses, and by enabling RF pulse readout from both ends of the nanowire. The dual-ended readout allows for the cancellation of jitter caused by the variable location of photon arrival along the meander when the differential signals are recombined with a balun.
 These detectors acheive jitter as low as 50 ps at the FW(1/100)M level, making them suitable for the demonstration of PPM with 50 ps slot widths and a 20 GHz clock.
 
-\hypertarget{fig:intro}{%
-\begin{figure}
-\centering
 \includegraphics[width=1\textwidth]{./figs_03/fig_intro_2_light.pdf}
-\caption[{PPM modulation and experiment setup}]{\textbf{PPM modulation and experiment setup} a) How bits are transmitted in M=16 PPM modulation. An optical pulse is transmitted with a clock-referenced integer delay which encodes 4 bits of data. b) Diagram of the expiremental setup. WG: wave generator, CD: clock divider board, AWG: Arbitrary Waveform Generator, MLL: Mode Locked Laser (Pritel UAC), IM: Intensity Modulator, BC: Bias Controller, FSC: Free Space Coupling System, DCA: DC Coupled Cryo-amp}
-\label{fig:intro}
-\end{figure}
-}
 
 However, the photon number number dependent response of these detectors is shown to affect the time-correlated measurements needed for high-rate PPM. This response, shown in Fig.~\ref{fig:waveform} is also known as photon number resolution (PNR) -- a property that is desirable in certain applications including quantum communication and quantum computing.
 The SNSPD generates RF pulses with greater amplitude and slew rate when detecting optical pulses with multiple photons. Photon number effects manifest in this lower jitter variety of SNSPD due to the more efficient coupling of the nanowire to the readout circuit through the impedance matching tapers. It is likely that these effects will be present in other new SNSPD types engineered for low jitter, whether the PNR resolution is desired or not.
