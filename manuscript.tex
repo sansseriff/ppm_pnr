@@ -39,40 +39,32 @@ Superconducting Nanowire Single Photon Detectors are a type of time-correlated p
 
 Deep Space Optical Communication has been a growing field of study in recent years, as researchers look for ways to communicate with spacecraft that are far away from Earth. The main challenge in deep space optical communication is the high loss and distance that the link must traverse. This limits the communication from the spacecraft, as it is limited by the power available on the spacecraft. This means that the communication protocol is limited by the number of bits that can be sent per unit of energy on the spacecraft, also known as photon information efficiency or bits per photon.
 
-In this article, we will focus on the use of Pulse Position Modulation (PPM) for deep space optical communication. PPM can achieve higher photon information efficiency than coherent detection techniques {[}cite a method here, like is QAM one of them? See dolinar paper{]} for which the need to measure phase of the incoming optical signal limits minimum transmission power.
+In this article, we will focus on the use of Pulse Position Modulation (PPM) for space based optical communication. PPM involves sending a pulse in one of $2^M$ possible time slots. The transmission of each such pulse carries M bits of information based on when it arrives in a set of bins called a frame.
 
-PPM involves sending an optical pulse in one of $2^M$ possible time slots. The transmissio of each such pulse carries M bits of information.
+The Deep Space Optical Communicaiton (DSOC) project managed by the Jet Propulsion Laboratory (JPL) aims to demonstrate optical communication using PPM with the Psyche spacecraft from distances of \textbf{\hl{XX to XX}} Au.
 
-For larger M, more data may be sent with a single optical pulse, thereby allowing a spacecrat to that is severely power limited to send more data over a high loss optical channel back to earth. The Deep Space Optical Communicaiton project managed by the Jet Propulsion Laboratory (JPL) aims to demonstrate optical communication using PPM with the Psyche spacecraft from distances of \textbf{\hl{XX to XX}} Au.
+For larger M, more data may be sent with a single optical pulse, thereby allowing a spacecrat to that is severely power limited to send more data over a high loss optical channel back to earth. This is quantified through the photon information efficiency $c_p = C/E$ where $C$ is the link capacity and $E$ is the photon cost per optical pulse
 
-\hypertarget{section}{%
-\paragraph{----}\label{section}}
+The existing deep space optical communication project uses M up to $2^8 = 256$, meaning that 8 bits of data may be carried in each optical pulse. M values as high as 19 have been demonstrated in the lab\cite{essiambre2023record}. However, the number of time bins needed per optical pulse scales exponentially with the number of bits transmitted per pulse. Therefore, for a given fixed clock rate and time bin duration, the PPM data rate decreases dramatically for higher M values.
 
-For large M, PPM achieves high photon information efficiency, allowing for the saving of power on the spacecraft and the sending of more information with fewer photons. The existing deep space optical communication project uses M up to $2^8 = 256$, meaning that 8 bits of data are carried in each optical pulse.
+We focus on demonstrating moderately large PIE, while also increasing the clock rate of the sytem by an order of magnitude relative to the DSOC platform (2\textasciitilde GHz). By operating at both higher clock rate and PIE than DSOC, this system exemplifies how future iterations of DSOC may send data more quickly but also over greater distances with the same power budget.
 
-In this project, we aimed to demonstrate even higher photon information efficiency by using M values up to 2048, or 11 bits of data per optical pulse.
+The increase in clock rate is made possible due to recent advancements in Niobium Nitride SNSPDs\textasciitilde{}\cite{Colangelo2023}. Low jitter performance is achieved by incorporating impedance matching tapers for efficient RF coupling, resulting in higher slew rate pulses, and by enabling RF pulse readout from both ends of the nanowire. The dual-ended readout allows for the cancellation of jitter caused by the variable location of photon arrival along the meander when the differential signals are recombined with a balun.
+These detectors acheive jitter as low as 50 ps at the FW(1/100)M level, making them suitable for the demonstration of PPM with 50 ps slot widths and a 20 GHz clock.
 
-While the use of large M values increases photon information efficiency, it also decreases the data rate of the system. This is because the number of time bins needed per optical pulse scales exponentially with the amount of data in each pulse. Therefore, for a given fixed clock rate and time bin duration, the data rate decreases dramatically for higher M values.
+However, the photon number number dependent response of these detectors is shown to affect the time-correlated measurements needed for high-rate PPM. This response, shown in Fig.~\ref{fig:waveform} is also known as photon number resolution (PNR) -- a property that is desirable in certain applications including quantum communication and quantum computing.
+The SNSPD generates RF pulses with greater amplitude and slew rate when detecting optical pulses with multiple photons. Photon number effects manifest in this lower jitter variety of SNSPD due to the more efficient coupling of the nanowire to the readout circuit through the impedance matching tapers. It is likely that these effects will be present in other new SNSPD types engineered for low jitter, whether the PNR resolution is desired or not.
 
-Using M values much larger than 11 is unlikely to be practical in future deep space optical communication systems. However, the data rate of these systems can be increased linearly by increasing the clock rate or bin size of the experiment. This is possible with the use of low jitter detection systems or low jitter superconducting nanowire single-photon detectors (SNSPDs).
-
-This study aims to evaluate the feasibility of transmitting high clock-rate pulse position modulated (PPM) data using a mode-locked laser and receiving it with a low jitter superconducting nanowire single-photon detector (SNSPD). The investigation was driven by recent advancements in NbN SNSPDs, which have achieved a jitter as low as 50 ps at the FW(1/100)M level, enabling the demonstration of PPM with 50 ps slot widths and a 20 GHz clock. The aim was to increase the data rate by a factor of 10, from 2 GHz to 20 GHz, in the next generation of the Deep Space Optical Communication (DSOC) project.
-
-During the course of this study, the focus shifted towards investigating the impact of photon number resolution (PNR) on the low jitter detection of optical pulses. PNR can have an unintended impact on the demonstration of high-rate PPM, and therefore a thorough study of its effects was deemed crucial. A novel PNR cancellation technique was developed and applied to successfully demonstrate high-rate PPM. This technique is considered essential for future low-jitter applications of SNSPDs that exhibit photon-number effects.
+As the PNR response affects the timing of fixed threashold timetaggs at any trigger level, it has a significant effect of the timing measurements used for the PPM demonstration. Any other applications illumnate these detectors with optical pulses of non-vanishing mean photon numbers will have to content with these effects as well. For this reason, we study the PNR response in detail and present two methods for managing it. We show how the photon number information can be deconvolved from the arrival time information, and how both de-correlated degrees of freedom can be measured simultaneously. This is applicable to certain types of high-rate quantum communication and computing systems.
 
 \hypertarget{fig:intro}{%
 \begin{figure}
 \centering
-\includegraphics[width=0.8\textwidth]{./figs_03/fig_intro_light.pdf}
+\includegraphics[width=0.8\textwidth]{./figs_03/fig_intro_2_light.pdf}
 \caption[{PPM modulation and experiment setup}]{\textbf{PPM modulation and experiment setup} a) How bits are transmitted in M=16 PPM modulation. An optical pulse is transmitted with a clock-referenced integer delay which encodes 4 bits of data. b) Diagram of the expiremental setup. WG: wave generator, CD: clock divider board, AWG: Arbitrary Waveform Generator, MLL: Mode Locked Laser (Pritel UAC), IM: Intensity Modulator, BC: Bias Controller, FSC: Free Space Coupling System, DCA: DC Coupled Cryo-amp}
 \label{fig:intro}
 \end{figure}
 }
-
-PPM relies on sending one optical pulse carrying M bits of information in one of $2^M$ possible time slots. For M = 2, this corresponds to sending an early pulse to represent a 0 bit and a late pulse to represent a 1 bit.
-
-\hypertarget{section-1}{%
-\section{--------------------}\label{section-1}}
 
 \hypertarget{fig:waveform}{%
 \begin{figure}
@@ -104,7 +96,7 @@ In this work:
 \item
   Efficiency = 0.84
 \item
-  Afterpulsing = 0 \%
+  Afterpulsing = 0 %
 \item
   Jitter = 15 ps
 \item
