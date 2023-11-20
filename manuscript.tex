@@ -73,48 +73,6 @@ For the tapered differential detectors, the PNR response affects timing of fixed
 \end{figure}
 }
 
-\hypertarget{detector-figure-of-merit}{%
-\section{Detector Figure of Merit}\label{detector-figure-of-merit}}
-
-The work here highlights the application of low jitter single-photon detectors for optical communication, which is impactful for deep-space optical communication as well as classical communication in quantum networks. Although single-photon counting is well estanblished for deep-space optical communication~\cite{Srinivasan2023GroundReceiver} so far it has not been utilized in quantum networks, which have so far relied on off-the-shelf SFP modules and DWDMs. However, when quantum channels are frequency multiplexed with much higher power classical channels, Raman scattered photons from the classical channel pollute the quantum channel~\cite{EraerdsRaman}.
-
-Attenuating classical communication to near the single photon level would solve this issue and require minimal added resources, as single photon detectors are already required at quantum nodes. DSOC demonstrates a promising approach to low-power classical communication based on phon counting and PPM which can be adapted for terrestrial quantum networks.
-
-To access the applicability of different detectors, here we compare some of the recent near infrared detectors.
-
-A useful figure of merit that includes all of the revelant detector metrics for photon timing was introduced by Bronzi and co-authors \cite{Bronzi2016}
-
-$$FoM_T = \frac{\eta  (1 - P_{ap})\Phi_{-3 \text{dB}}}{J} \sqrt{\frac{A}{D}},$$
-
-where $\eta$ is the single photon detection efficiency, $\Phi_{-3 \text{dB}}$ is the photon flux at which the system detection efficiency drops by 3~dB, $P_{ap}$ is the afterpulsing probability, $J$ is the detector jitter evaluated as the FWHM, $T_d$ is the deadtime, $A$ is the active area and $D$ is the dark count rate. Here we have defined the maximum photon flux as the 3~dB point, for ease of standardization.
-
-In this work:
-
-\begin{itemize}
-\tightlist
-\item
-  Efficiency = 0.84
-\item
-  Afterpulsing = 0 %
-\item
-  Jitter = 15 ps
-\item
-  Deadtime = 30 ns \textbf{\hl{measure 3dB flux}}
-\item
-  Area = 330 $\mu m^2$
-\item
-  Dark count rate = 20~Hz
-\end{itemize}
-
-$FoM_T = 7.58 \times 10^{12}$ at 1550 nm.
-
-The deadtime is calculated as the 1/MCR, which is the 3 dB point of the nominal efficiency. This is only a factor of 3.7 less than the state of the art visible Silicon SPADs (peak efficiency at 480~nm) \cite{Gramuglia2022}
-
-In the future, the performance of the optical communication system could be improved by using high count rate SNSPD arrays. Recently published high-count rate arrays have figures of merit of \textbf{\hl{$FoM_T$ for Peacoq and Resta2023 results}}. This would result in a proportinal increase in the data rate.
-\textbf{\hl{$FoM_T$ for fastest InGaAs/InP gated detector}}
-These devices are ideal for fiber-based optical communication. In free-space, the active area is especially important, whithout the use of an adaptive optics system.
-\textbf{\hl{$FoM_T$ for DSOC array}}
-
 \hypertarget{development-of-a-modulation-source}{%
 \subsection{Development of a modulation source}\label{development-of-a-modulation-source}}
 
@@ -167,6 +125,48 @@ We also present a 2-dimensional gaussian mixture model of the SNSPD response to 
 The full 2D treatment of photon number discrimination based on community detection of gaussian mixture groups is undeniably more complex than principle component analysis methods demonstrated in previous research\cite{sauer2023resolving, schapeler2023superconducting}. However, it's generality may be advantageous for future SNSPD systems that gather added data about the transient state of the SNSPD and readout circuitry. For example, more than two timing measurements from each SNSPD pulse may prove to be useful. Recent research has demonstrated that photon number information is present in the falling edge of the pulse \cite{sauer2023resolving, schapeler2023superconducting}, and, as shown here, timing measurements from two trigger levels on the rising edge are also useful. Therefore, the use of three or more unique time-correlated measurements may be advantageous. Digitizing the RF pulse with a high speed ADC or oscilloscope extends this thinking to many more measurements. Ultimately, photon number discrimination becomes a higher dimensional problem, for which gaussian mixture methods may outperform principle component analysis.
 
 Finally, higher dimensional analysis may be necessary when pulse overlap or time walk effects \cite{Mueller2023} complicate the nuanced photon number response characteristics of each SNSPD pulse. This is important in future SNSPD systems that are designed to exhibit both high maximum count rates \cite{Craiciu23} and photon number resolution.
+
+\hypertarget{detector-figure-of-merit}{%
+\section{Detector Figure of Merit}\label{detector-figure-of-merit}}
+
+The work here highlights the application of low jitter single-photon detectors for optical communication, which is impactful for deep-space optical communication as well as classical communication in quantum networks. Although single-photon counting is well estanblished for deep-space optical communication~\cite{Srinivasan2023GroundReceiver} so far it has not been utilized in quantum networks, which have so far relied on off-the-shelf SFP modules and DWDMs. However, when quantum channels are frequency multiplexed with much higher power classical channels, Raman scattered photons from the classical channel pollute the quantum channel~\cite{EraerdsRaman}.
+
+Attenuating classical communication to near the single photon level would solve this issue and require minimal added resources, as single photon detectors are already required at quantum nodes. DSOC demonstrates a promising approach to low-power classical communication based on phon counting and PPM which can be adapted for terrestrial quantum networks.
+
+To access the applicability of different detectors, here we compare some of the recent near infrared detectors.
+
+A useful figure of merit that includes all of the revelant detector metrics for photon timing was introduced by Bronzi and co-authors \cite{Bronzi2016}
+
+$$FoM_T = \frac{\eta  (1 - P_{ap})\Phi_{-3 \text{dB}}}{J} \sqrt{\frac{A}{D}},$$
+
+where $\eta$ is the single photon detection efficiency, $\Phi_{-3 \text{dB}}$ is the photon flux at which the system detection efficiency drops by 3~dB, $P_{ap}$ is the afterpulsing probability, $J$ is the detector jitter evaluated as the FWHM, $T_d$ is the deadtime, $A$ is the active area and $D$ is the dark count rate. Here we have defined the maximum photon flux as the 3~dB point, for ease of standardization.
+
+In this work:
+
+\begin{itemize}
+\tightlist
+\item
+  Efficiency = 0.84
+\item
+  Afterpulsing = 0 %
+\item
+  Jitter = 15 ps
+\item
+  Deadtime = 30 ns \textbf{\hl{measure 3dB flux}}
+\item
+  Area = 330 $\mu m^2$
+\item
+  Dark count rate = 20~Hz
+\end{itemize}
+
+$FoM_T = 7.58 \times 10^{12}$ at 1550 nm.
+
+The deadtime is calculated as the 1/MCR, which is the 3 dB point of the nominal efficiency. This is only a factor of 3.7 less than the state of the art visible Silicon SPADs (peak efficiency at 480~nm) \cite{Gramuglia2022}
+
+In the future, the performance of the optical communication system could be improved by using high count rate SNSPD arrays. Recently published high-count rate arrays have figures of merit of \textbf{\hl{$FoM_T$ for Peacoq and Resta2023 results}}. This would result in a proportinal increase in the data rate.
+\textbf{\hl{$FoM_T$ for fastest InGaAs/InP gated detector}}
+These devices are ideal for fiber-based optical communication. In free-space, the active area is especially important, whithout the use of an adaptive optics system.
+\textbf{\hl{$FoM_T$ for DSOC array}}
 
 \bibliography{references}
 
