@@ -11,7 +11,11 @@ project:
     Tagger files and decoded intermediate data for the 20 GHz and 10.75 GHz pulse-position-modulation (PPM)
     demonstrations, and the detector waveform data. Analysis code: https://github.com/sansseriff/ppm_pnr
   project_id: 283395
-  url: https://figshare.com/account/projects/283395
+  url: https://figshare.com/projects/ppm_pnr_datasets/283395
+collection:
+  collection_id: 8789040
+  doi: 10.6084/m9.figshare.c.8789040
+  url: https://doi.org/10.6084/m9.figshare.c.8789040
 common:
   license: CC BY 4.0
   defined_type: dataset

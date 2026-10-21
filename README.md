@@ -34,7 +34,7 @@ Outputs go to `ppm_20ghz/figs/`, `ppm_10ghz/figs/`, `waveform/figs/` and the `in
 
 ## Data
 
-| key (`--dataset`) | content | zip | unpacked | DOI (reserved) |
+| key (`--dataset`) | content | zip | unpacked | DOI |
 |---|---|---|---|---|
 | `ppm_20ghz_decoded` | 20 GHz decode files (16-48 dB), photon-number model, PNR refit, 2023 alignment files | 27 MB | 148 MB | 10.6084/m9.figshare.34741485 |
 | `ppm_10ghz_decoded` | 10.75 GHz decode files (18-44 dB, 42 dB = corrected re-decode), photon-number model, PNR refit | 114 MB | 512 MB | 10.6084/m9.figshare.34741488 |
@@ -42,7 +42,8 @@ Outputs go to `ppm_20ghz/figs/`, `ppm_10ghz/figs/`, `waveform/figs/` and the `in
 | `ppm_20ghz_raw` | raw Swabian Time Tagger files (16-50 dB) + AWG ground truth | 2.0 GB | 2.9 GB | 10.6084/m9.figshare.34741494 |
 | `ppm_10ghz_raw` | raw Swabian Time Tagger files (18-44 dB) + AWG ground truth | 1.3 GB | 2.1 GB | 10.6084/m9.figshare.34741497 |
 
-Figshare project: *link to be added on publication* (the items are private drafts until the paper is accepted).
+All five items are published in one figshare collection, DOI [10.6084/m9.figshare.c.8789040](https://doi.org/10.6084/m9.figshare.c.8789040)
+(also the [ppm_pnr_datasets](https://figshare.com/projects/ppm_pnr_datasets/283395) project). Cite the collection DOI for the data as a whole.
 
 ```sh
 uv run python figshare_download.py --list                         # sizes, DOIs, what is already here
@@ -55,7 +56,6 @@ Each zip contains paths relative to the repository root (for example
 `ppm_20ghz/inter/decode_20GHz24.0.json`) and is unpacked in place. The download is checked against the md5
 that figshare computed on upload, and every unpacked file against the dataset's `MANIFEST_<key>.txt`.
 Datasets that are already present are skipped (`--force` downloads again, `--verify` re-checks md5s).
-Until the items are published, set `FIGSHARE_TOKEN` to a personal figshare token with access to them.
 The raw data are only needed to re-run the decoder.
 
 All dataset metadata (article ids, DOIs, sizes, file lists) are in `figshare_metadata.yaml`.
