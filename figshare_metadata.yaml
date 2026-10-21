@@ -1,0 +1,288 @@
+# Datasets for this repository, one figshare item per subset so that subsets can be downloaded separately.
+# Used by figshare_download.py (users) and tools/figshare_upload.py (maintainer).
+# Each zip contains paths relative to the repository root; `extract_to: .` unpacks it in place.
+# Fields filled by tools: zip, zip_size, zip_md5, unpacked_size, manifest, files (package_datasets.py);
+# article_id, doi, url_private_html, url_public_html, file_id (figshare_upload.py).
+project:
+  title: ppm_pnr_datasets
+  description: >-
+    Data for the manuscript "Data Recovery and Pulse Position Modulation with a Photon Number Resolving SNSPD"
+    (A. Mueller, B. Korzh, E. Wollman, A. D. Beyer, I. Craiciu, M. D. Shaw, M. Spiropulu). Raw Swabian Time
+    Tagger files and decoded intermediate data for the 20 GHz and 10.75 GHz pulse-position-modulation (PPM)
+    demonstrations, and the detector waveform data. Analysis code: https://github.com/sansseriff/ppm_pnr
+  project_id: 283395
+  url: https://figshare.com/account/projects/283395
+common:
+  license: CC BY 4.0
+  defined_type: dataset
+  categories: [30130, 26512, 30232]
+  keywords:
+  - superconducting nanowire single-photon detector
+  - SNSPD
+  - photon number resolution
+  - pulse position modulation
+  - optical communication
+  - time tagging
+  - Gaussian mixture model
+  repo_url: https://github.com/sansseriff/ppm_pnr
+datasets:
+  ppm_20ghz_decoded:
+    title: 'PPM with a photon-number-resolving SNSPD: 20 GHz decoded data'
+    summary: 20 GHz decoded frames, preamble GMM fits and photon-number model (needed for Figs. 3-7, S1)
+    extract_to: .
+    description: >-
+      <p>Decoded data for the 20 GHz (50 ps slot, 2048-ary) pulse-position-modulation demonstration, for
+      attenuator settings 16-48 dB in 2 dB steps. These are the inputs to every figure-making script and notebook
+      of the analysis repository (https://github.com/sansseriff/ppm_pnr).</p>
+      <p>Contents (unzip into the repository root; files land in ppm_20ghz/inter/):<br>
+      decode_20GHz{dB}.0.json: output of the decoder (ppm_20ghz/src_decode/JitRead_PPMSets_20GHz.py) for each
+      attenuation: per-frame decode results for five repetitions of the transmission (slot estimate, true slot,
+      raw (t_A, t_B) time tags), the preamble calibration points and 23 Gaussian-mixture fits of them, and the
+      slope-correction lookup and histograms.<br>
+      static_sim.json: photon-number model (groups of Gaussian components, photon number 1-4 and 5+) built from
+      the 24 dB preamble.<br>
+      pnr_refit.json: prior-free photon-number statistics (output of analysis/pnr_refit.py).<br>
+      offset_correction_{dB}.json, max_offsets.json: alignment vectors and timing offsets used by the original
+      (2023) Fig. 4 notebook.<br>
+      MANIFEST_ppm_20ghz_decoded.txt: md5 and size of every file.</p>
+      <p>Recommended: python figshare_download.py --dataset ppm_20ghz_decoded (from the repository root).</p>
+    zip: ppm_20ghz_decoded.zip
+    zip_size: 26590698
+    zip_md5: 52718c74344233d7f038d1d406a4c987
+    unpacked_size: 148220108
+    manifest: ppm_20ghz/inter/MANIFEST_ppm_20ghz_decoded.txt
+    files:
+    - ppm_20ghz/inter/decode_20GHz16.0.json
+    - ppm_20ghz/inter/decode_20GHz18.0.json
+    - ppm_20ghz/inter/decode_20GHz20.0.json
+    - ppm_20ghz/inter/decode_20GHz22.0.json
+    - ppm_20ghz/inter/decode_20GHz24.0.json
+    - ppm_20ghz/inter/decode_20GHz26.0.json
+    - ppm_20ghz/inter/decode_20GHz28.0.json
+    - ppm_20ghz/inter/decode_20GHz30.0.json
+    - ppm_20ghz/inter/decode_20GHz32.0.json
+    - ppm_20ghz/inter/decode_20GHz34.0.json
+    - ppm_20ghz/inter/decode_20GHz36.0.json
+    - ppm_20ghz/inter/decode_20GHz38.0.json
+    - ppm_20ghz/inter/decode_20GHz40.0.json
+    - ppm_20ghz/inter/decode_20GHz42.0.json
+    - ppm_20ghz/inter/decode_20GHz44.0.json
+    - ppm_20ghz/inter/decode_20GHz46.0.json
+    - ppm_20ghz/inter/decode_20GHz48.0.json
+    - ppm_20ghz/inter/static_sim.json
+    - ppm_20ghz/inter/pnr_refit.json
+    - ppm_20ghz/inter/offset_correction_16.json
+    - ppm_20ghz/inter/offset_correction_18.json
+    - ppm_20ghz/inter/offset_correction_20.json
+    - ppm_20ghz/inter/offset_correction_22.json
+    - ppm_20ghz/inter/offset_correction_24.json
+    - ppm_20ghz/inter/offset_correction_26.json
+    - ppm_20ghz/inter/offset_correction_28.json
+    - ppm_20ghz/inter/offset_correction_30.json
+    - ppm_20ghz/inter/offset_correction_32.json
+    - ppm_20ghz/inter/offset_correction_34.json
+    - ppm_20ghz/inter/offset_correction_36.json
+    - ppm_20ghz/inter/offset_correction_38.json
+    - ppm_20ghz/inter/offset_correction_40.json
+    - ppm_20ghz/inter/offset_correction_42.json
+    - ppm_20ghz/inter/offset_correction_44.json
+    - ppm_20ghz/inter/offset_correction_46.json
+    - ppm_20ghz/inter/offset_correction_48.json
+    - ppm_20ghz/inter/max_offsets.json
+    article_id: 34741485
+    doi: 10.6084/m9.figshare.34741485
+    url_private_html: https://figshare.com/account/articles/34741485
+    url_public_html: https://doi.org/10.6084/m9.figshare.34741485
+    file_id: 70471716
+  ppm_10ghz_decoded:
+    title: 'PPM with a photon-number-resolving SNSPD: 10.75 GHz decoded data'
+    summary: 10.75 GHz decoded frames, preamble GMM fits and photon-number model (supplemental figures)
+    extract_to: .
+    description: >-
+      <p>Decoded data for the 10.75 GHz (93 ps slot, 1024-ary) pulse-position-modulation demonstration, for
+      attenuator settings 18-44 dB in 2 dB steps. Inputs to the supplemental 10.75 GHz figures and tables of the
+      analysis repository (https://github.com/sansseriff/ppm_pnr).</p>
+      <p>Contents (unzip into the repository root; files land in ppm_10ghz/inter/):<br>
+      decode_10GHz{dB}.0.json: output of the decoder (ppm_10ghz/src_decode/JitRead_PPMSets.py). The 42 dB file is
+      the corrected re-decode (decode window moved out of the AWG sequence transition; see the supplement).<br>
+      static_sim.json: photon-number model built from the 28 dB preamble (analysis/build_pnr_model.py).<br>
+      pnr_refit.json: prior-free photon-number statistics (analysis/pnr_refit.py).<br>
+      MANIFEST_ppm_10ghz_decoded.txt: md5 and size of every file.</p>
+      <p>Recommended: python figshare_download.py --dataset ppm_10ghz_decoded (from the repository root).</p>
+    zip: ppm_10ghz_decoded.zip
+    zip_size: 114479937
+    zip_md5: b65a55c1eea8f9e3bfea4dd25a57b0b9
+    unpacked_size: 511696804
+    manifest: ppm_10ghz/inter/MANIFEST_ppm_10ghz_decoded.txt
+    files:
+    - ppm_10ghz/inter/decode_10GHz18.0.json
+    - ppm_10ghz/inter/decode_10GHz20.0.json
+    - ppm_10ghz/inter/decode_10GHz22.0.json
+    - ppm_10ghz/inter/decode_10GHz24.0.json
+    - ppm_10ghz/inter/decode_10GHz26.0.json
+    - ppm_10ghz/inter/decode_10GHz28.0.json
+    - ppm_10ghz/inter/decode_10GHz30.0.json
+    - ppm_10ghz/inter/decode_10GHz32.0.json
+    - ppm_10ghz/inter/decode_10GHz34.0.json
+    - ppm_10ghz/inter/decode_10GHz36.0.json
+    - ppm_10ghz/inter/decode_10GHz38.0.json
+    - ppm_10ghz/inter/decode_10GHz40.0.json
+    - ppm_10ghz/inter/decode_10GHz42.0.json
+    - ppm_10ghz/inter/decode_10GHz44.0.json
+    - ppm_10ghz/inter/static_sim.json
+    - ppm_10ghz/inter/pnr_refit.json
+    article_id: 34741488
+    doi: 10.6084/m9.figshare.34741488
+    url_private_html: https://figshare.com/account/articles/34741488
+    url_public_html: https://doi.org/10.6084/m9.figshare.34741488
+    file_id: 70471719
+  waveform:
+    title: 'PPM with a photon-number-resolving SNSPD: detector waveform data'
+    summary: trigger-level scan of the SNSPD output pulse (Fig. 2)
+    extract_to: .
+    description: >-
+      <p>Detector waveform data used for Fig. 2 (pulse shape and trigger levels) of the manuscript. Analysis
+      repository: https://github.com/sansseriff/ppm_pnr</p>
+      <p>Contents (unzip into the repository root; files land in waveform/data/):<br>
+      decent.npy: trigger-level scan of the amplified SNSPD output pulse recorded with the time tagger: a 2D
+      histogram of trigger-crossing times (columns, ps) for trigger levels from about 5 to 60 mV (rows), which
+      maps out the average pulse shape.<br>
+      tigger_level_time_difference.json: the t_B - t_A delay (in ps) of single-photon pulses between the two
+      trigger levels, derived from decent.npy by waveform/notebooks/main.ipynb and used by the 20 GHz notebooks.<br>
+      MANIFEST_waveform.txt: md5 and size of every file.</p>
+    zip: waveform.zip
+    zip_size: 100602
+    zip_md5: f813b6f1973871ce836ca764bb9915a0
+    unpacked_size: 3200145
+    manifest: waveform/data/MANIFEST_waveform.txt
+    files:
+    - waveform/data/decent.npy
+    - waveform/data/tigger_level_time_difference.json
+    article_id: 34741491
+    doi: 10.6084/m9.figshare.34741491
+    url_private_html: https://figshare.com/account/articles/34741491
+    url_public_html: https://doi.org/10.6084/m9.figshare.34741491
+    file_id: 70471713
+  ppm_20ghz_raw:
+    title: 'PPM with a photon-number-resolving SNSPD: 20 GHz raw time tags'
+    summary: 20 GHz raw Swabian Time Tagger files (16-50 dB) and AWG ground-truth sequences
+    extract_to: .
+    description: >-
+      <p>Raw time-tag data of the 20 GHz (50 ps slot, 2048-ary) pulse-position-modulation demonstration with a
+      differential SNSPD read out at two trigger levels. Analysis repository: https://github.com/sansseriff/ppm_pnr</p>
+      <p>Contents (unzip into the repository root; files land in ppm_20ghz/data/):<br>
+      measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_{dB}.0.1.ttbin: Swabian Time Tagger files
+      (Time Tagger software 2.8), one 340 s acquisition per attenuator setting, 16-50 dB in 2 dB steps (50 dB
+      was not used in the paper). The *.0.ttbin files are the 2.7 kB headers of each file set. Channels: 18 = AWG
+      clock, -5 = low trigger level (t_A, 8 mV, falling-edge channel), -14 = high trigger level (t_B, 50 mV),
+      9 = AWG sequence marker.<br>
+      ground_truth.zip: the transmitted AWG sequences (yml: slot of every frame; bin: AWG waveform) and the
+      sequence parameters (0_..._params.yml).<br>
+      MANIFEST_ppm_20ghz_raw.txt: md5 and size of every file.</p>
+      <p>Reading .ttbin files requires the Swabian Time Tagger software (Linux or Windows; the repository has a
+      Docker image). Most users only need the decoded data item.</p>
+    zip: ppm_20ghz_raw.zip
+    zip_size: 1966965083
+    zip_md5: 67cc463bef3208d35c645d8d29421cf0
+    unpacked_size: 2907345127
+    manifest: ppm_20ghz/data/MANIFEST_ppm_20ghz_raw.txt
+    files:
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_16.0.1.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_16.0.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_18.0.1.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_18.0.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_20.0.1.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_20.0.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_22.0.1.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_22.0.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_24.0.1.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_24.0.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_26.0.1.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_26.0.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_28.0.1.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_28.0.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_30.0.1.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_30.0.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_32.0.1.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_32.0.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_34.0.1.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_34.0.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_36.0.1.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_36.0.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_38.0.1.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_38.0.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_40.0.1.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_40.0.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_42.0.1.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_42.0.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_44.0.1.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_44.0.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_46.0.1.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_46.0.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_48.0.1.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_48.0.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_50.0.1.ttbin
+    - ppm_20ghz/data/measured/Sept10_20GHz/340s_.008_.050_Sept10_picScan_50.0.ttbin
+    - ppm_20ghz/data/ground_truth.zip
+    article_id: 34741494
+    doi: 10.6084/m9.figshare.34741494
+    url_private_html: https://figshare.com/account/articles/34741494
+    url_public_html: https://doi.org/10.6084/m9.figshare.34741494
+    file_id: 70471746
+  ppm_10ghz_raw:
+    title: 'PPM with a photon-number-resolving SNSPD: 10.75 GHz raw time tags'
+    summary: 10.75 GHz raw Swabian Time Tagger files (18-44 dB) and AWG ground-truth sequences
+    extract_to: .
+    description: >-
+      <p>Raw time-tag data of the 10.75 GHz (93 ps slot, 1024-ary) pulse-position-modulation demonstration with
+      a differential SNSPD read out at two trigger levels. Analysis repository:
+      https://github.com/sansseriff/ppm_pnr</p>
+      <p>Contents (unzip into the repository root; files land in ppm_10ghz/data/):<br>
+      measured/430s_.002_.050_Aug8_picScan_{dB}.0.1.ttbin: Swabian Time Tagger files (Time Tagger software
+      2.8), one 430 s acquisition per attenuator setting, 18-44 dB in 2 dB steps. The *.0.ttbin files are the
+      2.7 kB headers of each file set. Channels: 18 = AWG clock, -5 = t_A (low trigger level), -14 = t_B (high
+      trigger level), 9 = AWG sequence marker.<br>
+      ground_truth.zip: the transmitted AWG sequences and sequence parameters.<br>
+      MANIFEST_ppm_10ghz_raw.txt: md5 and size of every file.</p>
+      <p>Reading .ttbin files requires the Swabian Time Tagger software (Linux or Windows; the repository has a
+      Docker image). Most users only need the decoded data item.</p>
+    zip: ppm_10ghz_raw.zip
+    zip_size: 1254082085
+    zip_md5: d543f082849d37f20ed57b2adff995cf
+    unpacked_size: 2079041493
+    manifest: ppm_10ghz/data/MANIFEST_ppm_10ghz_raw.txt
+    files:
+    - ppm_10ghz/data/measured/430s_.002_.050_Aug8_picScan_18.0.1.ttbin
+    - ppm_10ghz/data/measured/430s_.002_.050_Aug8_picScan_18.0.ttbin
+    - ppm_10ghz/data/measured/430s_.002_.050_Aug8_picScan_20.0.1.ttbin
+    - ppm_10ghz/data/measured/430s_.002_.050_Aug8_picScan_20.0.ttbin
+    - ppm_10ghz/data/measured/430s_.002_.050_Aug8_picScan_22.0.1.ttbin
+    - ppm_10ghz/data/measured/430s_.002_.050_Aug8_picScan_22.0.ttbin
+    - ppm_10ghz/data/measured/430s_.002_.050_Aug8_picScan_24.0.1.ttbin
+    - ppm_10ghz/data/measured/430s_.002_.050_Aug8_picScan_24.0.ttbin
+    - ppm_10ghz/data/measured/430s_.002_.050_Aug8_picScan_26.0.1.ttbin
+    - ppm_10ghz/data/measured/430s_.002_.050_Aug8_picScan_26.0.ttbin
+    - ppm_10ghz/data/measured/430s_.002_.050_Aug8_picScan_28.0.1.ttbin
+    - ppm_10ghz/data/measured/430s_.002_.050_Aug8_picScan_28.0.ttbin
+    - ppm_10ghz/data/measured/430s_.002_.050_Aug8_picScan_30.0.1.ttbin
+    - ppm_10ghz/data/measured/430s_.002_.050_Aug8_picScan_30.0.ttbin
+    - ppm_10ghz/data/measured/430s_.002_.050_Aug8_picScan_32.0.1.ttbin
+    - ppm_10ghz/data/measured/430s_.002_.050_Aug8_picScan_32.0.ttbin
+    - ppm_10ghz/data/measured/430s_.002_.050_Aug8_picScan_34.0.1.ttbin
+    - ppm_10ghz/data/measured/430s_.002_.050_Aug8_picScan_34.0.ttbin
+    - ppm_10ghz/data/measured/430s_.002_.050_Aug8_picScan_36.0.1.ttbin
+    - ppm_10ghz/data/measured/430s_.002_.050_Aug8_picScan_36.0.ttbin
+    - ppm_10ghz/data/measured/430s_.002_.050_Aug8_picScan_38.0.1.ttbin
+    - ppm_10ghz/data/measured/430s_.002_.050_Aug8_picScan_38.0.ttbin
+    - ppm_10ghz/data/measured/430s_.002_.050_Aug8_picScan_40.0.1.ttbin
+    - ppm_10ghz/data/measured/430s_.002_.050_Aug8_picScan_40.0.ttbin
+    - ppm_10ghz/data/measured/430s_.002_.050_Aug8_picScan_42.0.1.ttbin
+    - ppm_10ghz/data/measured/430s_.002_.050_Aug8_picScan_42.0.ttbin
+    - ppm_10ghz/data/measured/430s_.002_.050_Aug8_picScan_44.0.1.ttbin
+    - ppm_10ghz/data/measured/430s_.002_.050_Aug8_picScan_44.0.ttbin
+    - ppm_10ghz/data/ground_truth.zip
+    article_id: 34741497
+    doi: 10.6084/m9.figshare.34741497
+    url_private_html: https://figshare.com/account/articles/34741497
+    url_public_html: https://doi.org/10.6084/m9.figshare.34741497
+    file_id: 70471722

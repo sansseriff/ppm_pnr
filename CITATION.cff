@@ -1,0 +1,68 @@
+cff-version: 1.2.0
+message: "If you use this software or data, please cite the article below."
+title: "Code for 'Data Recovery and Pulse Position Modulation with a Photon Number Resolving SNSPD'"
+version: 1.0.0
+license: MIT
+repository-code: "https://github.com/sansseriff/ppm_pnr"  # placeholder: repository not yet public
+authors:
+  - family-names: Mueller
+    given-names: Andrew
+    orcid: "https://orcid.org/0000-0002-6598-9732"
+    affiliation: "California Institute of Technology; Jet Propulsion Laboratory"
+  - family-names: Korzh
+    given-names: Boris
+    affiliation: "Jet Propulsion Laboratory, California Institute of Technology"
+  - family-names: Wollman
+    given-names: Emma
+    affiliation: "Jet Propulsion Laboratory, California Institute of Technology"
+  - family-names: Beyer
+    given-names: Andrew D.
+    affiliation: "Jet Propulsion Laboratory, California Institute of Technology"
+  - family-names: Craiciu
+    given-names: Ioana
+    affiliation: "Jet Propulsion Laboratory, California Institute of Technology"
+  - family-names: Shaw
+    given-names: Matthew D.
+    affiliation: "Jet Propulsion Laboratory, California Institute of Technology"
+  - family-names: Spiropulu
+    given-names: Maria
+    affiliation: "California Institute of Technology"
+identifiers:
+  - type: doi
+    value: "10.0000/placeholder"  # TODO: article DOI once published
+    description: "Article (placeholder)"
+  - type: doi
+    value: "10.6084/m9.figshare.34741485"
+    description: "Dataset: 20 GHz decoded data (figshare, reserved DOI)"
+  - type: doi
+    value: "10.6084/m9.figshare.34741488"
+    description: "Dataset: 10.75 GHz decoded data (figshare, reserved DOI)"
+  - type: doi
+    value: "10.6084/m9.figshare.34741491"
+    description: "Dataset: detector waveform data (figshare, reserved DOI)"
+  - type: doi
+    value: "10.6084/m9.figshare.34741494"
+    description: "Dataset: 20 GHz raw time tags (figshare, reserved DOI)"
+  - type: doi
+    value: "10.6084/m9.figshare.34741497"
+    description: "Dataset: 10.75 GHz raw time tags (figshare, reserved DOI)"
+preferred-citation:
+  type: article
+  title: "Data Recovery and Pulse Position Modulation with a Photon Number Resolving SNSPD"
+  authors:
+    - family-names: Mueller
+      given-names: Andrew
+    - family-names: Korzh
+      given-names: Boris
+    - family-names: Wollman
+      given-names: Emma
+    - family-names: Beyer
+      given-names: Andrew D.
+    - family-names: Craiciu
+      given-names: Ioana
+    - family-names: Shaw
+      given-names: Matthew D.
+    - family-names: Spiropulu
+      given-names: Maria
+  journal: "Optics Express (submitted)"
+  doi: "10.0000/placeholder"  # TODO

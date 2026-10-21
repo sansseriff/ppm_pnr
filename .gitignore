@@ -1,0 +1,27 @@
+# environments / caches
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.DS_Store
+._*
+
+# data: filled by figshare_download.py, never committed
+/ppm_20ghz/data/*
+/ppm_20ghz/inter/*
+/ppm_20ghz/figs/*
+/ppm_10ghz/data/*
+/ppm_10ghz/inter/*
+/ppm_10ghz/figs/*
+/waveform/data/*
+/waveform/figs/*
+!/*/data/.gitkeep
+!/*/inter/.gitkeep
+!/*/figs/.gitkeep
+
+# downloads in progress
+*.zip.part
+/downloads/
+
+# written by the notebooks (Bokeh document for the web visualisation)
+/ppm_20ghz/notebooks/pnr_gmm.json

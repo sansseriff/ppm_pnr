@@ -1,0 +1,49 @@
+[project]
+name = "ppm-pnr"
+version = "1.0.0"
+description = "Analysis code for 'Data Recovery and Pulse Position Modulation with a Photon Number Resolving SNSPD'"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Andrew Mueller", email = "andrewstermueller@gmail.com" }]
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "numpy>=2.1",            # 2.0.x gives spurious matmul warnings with macOS Accelerate
+    "scipy>=1.14",
+    "scikit-learn>=1.5",
+    "numba>=0.61",
+    "matplotlib>=3.9",
+    "orjson>=3.10",
+    "networkx>=3.4",
+    "pillow>=10",
+    "pydantic>=2.10",
+    "pyyaml>=6",
+    "requests>=2.32",
+]
+
+[dependency-groups]
+# Jupyter + the author's plotting helpers, needed only for the notebooks (Figs. 2-4, S1)
+notebooks = [
+    "jupyter>=1.1",
+    "ipykernel>=6.29",
+    "nbconvert>=7.16",
+    "snsphd>=0.1.5",
+    "bokeh>=3.6",           # interactive visualisations at the end of gmm_intro_analysis_t.ipynb
+    "plotly>=5.24",         # 3D view at the end of waveform/notebooks/main.ipynb
+]
+# maintainer tools (dataset packaging / figshare upload, notebook output stripping)
+tools = [
+    "ruamel.yaml>=0.18",
+    "nbstripout>=0.8",
+]
+
+[tool.uv]
+default-groups = ["notebooks"]
+
+[build-system]
+requires = ["uv_build>=0.8,<0.12"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "analysis"
+module-root = ""
