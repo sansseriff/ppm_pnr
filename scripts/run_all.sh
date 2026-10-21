@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Regenerate the figures and tables of the paper from the decoded data.
 #
-#   scripts/run_all.sh                    # Figs. 5-7 + supplemental 10.75 GHz figures + SLOPE/GMM tables
-#   scripts/run_all.sh --notebooks        # also execute the notebooks for Figs. 2, 3, 4, S1
+#   scripts/run_all.sh                    # every figure of the paper and supplement + SLOPE/GMM tables
+#   scripts/run_all.sh --notebooks        # also execute the walk-through notebooks in notebooks/
 #   scripts/run_all.sh --rebuild-models   # also rebuild the photon-number models (-> inter/static_sim_rebuilt.json)
 #   scripts/run_all.sh --dataset 20       # only one dataset (10 or 20)
 #
@@ -53,17 +53,22 @@ for ds in $DATASETS; do
   fi
 done
 
+# figures that need the 20 GHz mu table and fitted offsets written above, or the waveform scan
+if [[ " $DATASETS " == *" 20 "* ]]; then
+  run uv run python -m analysis.make_fig_slope                                           # Fig. 3
+  run uv run python -m analysis.make_fig_gmm_intro                                       # Fig. 4
+  run uv run python -m analysis.make_fig_ica                                             # Fig. S1
+fi
+if [[ -f waveform/data/decent.npy ]]; then
+  run uv run python -m analysis.make_fig_waveform                                        # Fig. 2
+fi
+
 if [[ $NOTEBOOKS == 1 ]]; then
+  # walk-through notebooks (they only call analysis/ and plot); executed copies go to a temp dir
   out=$(mktemp -d)
-  nb() {  # execute a notebook in its own folder; the executed copy goes to a temp dir, the repo copy stays clean
-    run uv run jupyter nbconvert --to notebook --execute --ExecutePreprocessor.timeout=3600 \
-      --output-dir "$out" "$1"
-  }
-  [[ -f waveform/data/decent.npy ]] && nb waveform/notebooks/main.ipynb                 # Fig. 2
-  if [[ -f ppm_20ghz/inter/decode_20GHz16.0.json ]]; then
-    nb ppm_20ghz/notebooks/decode_analysis.ipynb                                         # Fig. 3
-    nb ppm_20ghz/notebooks/gmm_intro_analysis_t.ipynb                                    # Fig. 4, Fig. S1
-  fi
+  for nb in notebooks/decoding_comparison.ipynb notebooks/photon_number_model.ipynb; do
+    run uv run jupyter nbconvert --to notebook --execute --ExecutePreprocessor.timeout=3600 --output-dir "$out" "$nb"
+  done
   echo "executed notebooks in $out"
 fi
 echo "done"

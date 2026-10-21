@@ -31,6 +31,7 @@ import orjson
 from matplotlib.patches import Ellipse
 
 from analysis.datasets import decode_path, get
+from analysis.display import offset_for_center
 from analysis.pnr_refit import fit_weights_and_shift, flatten, group_loglik, init_shift_grid, load_groups, poisson_pmf
 
 GROUP_COLORS = ["#1f5fa8", "#7b2fd6", "#e8338f", "#f59a45", "#9be05a"]
@@ -99,10 +100,11 @@ def groupings_figure(cfg):
     print(f"{cfg['tag']} {cfg['group_db']} dB: slot accuracy {ok.mean():.4f} on {len(ok)} held-out detections; "
           f"photon-number fractions {np.round(np.bincount(num, minlength=J) / len(num), 3).tolist()}")
 
-    # display coordinates: common-mode shift putting the 1-photon group at t_A = 0 (keeps t_B - t_A)
-    c1 = np.average(groups[0]["means"], weights=groups[0]["weights"], axis=0) + v
-    rel = rel - c1[0]
-    v = v - c1[0]
+    # display coordinates (analysis/display.py), using the shift fit here on stream 0
+    v_fit = v.copy()
+    off = offset_for_center(cfg, np.average(groups[0]["means"], weights=groups[0]["weights"], axis=0) + v)
+    rel = rel + off
+    v = v + off
 
     fig, axs = plt.subplots(1, 3, figsize=(12, 6.2), sharex=True, sharey=True)
     draw_groups(axs[0], groups, v)
@@ -134,7 +136,7 @@ def groupings_figure(cfg):
     out = cfg["out"] + f"pnr_resolved_arrival_time_groupings_{cfg['tag']}_light"
     fig.savefig(out + ".pdf", dpi=300)
     fig.savefig(out + ".png", dpi=110)
-    return dict(slot_accuracy=float(ok.mean()), n=int(len(ok)), pi=pi.tolist(), shift=(v + c1[0]).tolist())
+    return dict(slot_accuracy=float(ok.mean()), n=int(len(ok)), pi=pi.tolist(), shift=v_fit.tolist())
 
 
 def statistics_figure(cfg):

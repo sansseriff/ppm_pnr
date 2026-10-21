@@ -22,6 +22,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from analysis.datasets import get
+from analysis.display import display_offset, one_photon_center
 from analysis.fair_comparison import cached_analysis
 
 DEAD_TIME_PS = 250e3  # from the ground-truth params (minimum_dead_time: 250 ns)
@@ -160,10 +161,11 @@ def main():
     # ---- c, d) scatter of detections relative to the true slot
     for ax, db, label in [(ax_c, cfg["scatter_dbs"][0], "c)"), (ax_d, cfg["scatter_dbs"][1], "d)")]:
         ev = events[db]
-        x = ev["xy"][:, 0] - T * ev["true"]
-        y = ev["xy"][:, 1] - T * ev["true"]
+        off = display_offset(cfg, db)
+        x = ev["xy"][:, 0] - T * ev["true"] + off[0]
+        y = ev["xy"][:, 1] - T * ev["true"] + off[1]
         g, s_ = ev["gmm_ok"], ev["slope_ok"]
-        cx, cy = np.median(x[g]), np.median(y[g])
+        c1 = one_photon_center(cfg, db) + off
         kw = dict(s=2.5, rasterized=True, lw=0)
         for i in range(-7, 8):
             if i:
@@ -173,10 +175,10 @@ def main():
                    label="GMM correct,\nSLOPE incorrect", **kw)
         ax.scatter(x[~g & s_], y[~g & s_], color=c["broken"], alpha=0.5,
                    label="GMM incorrect,\nSLOPE correct", **kw)
-        span = 4 * T
-        ax.set_xlim(cx - span * 0.5, cx + span * 0.5)
-        ax.set_ylim(cy - span * 0.9, cy + span * 0.9)
-        ax.set_aspect("equal", adjustable="datalim")
+        (x0, x1), (y0, y1) = cfg["scatter_window"]
+        ax.set_xlim(c1[0] + x0, c1[0] + x1)
+        ax.set_ylim(c1[1] + y0, c1[1] + y1)
+        ax.set_aspect("equal", adjustable="box")
         ax.set_xlabel(r"$t_A$ (ps)")
         ax.set_ylabel(r"$t_B$ (ps)")
         i = int(np.where(dbs == db)[0][0])

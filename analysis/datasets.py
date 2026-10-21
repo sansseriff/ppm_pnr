@@ -28,6 +28,9 @@ DATASETS = {
         # Fig. 6 shows the 26 dB data
         model_db=24,
         group_db=26,
+        # display coordinates (analysis/display.py): t_B - t_A of 1-photon events = waveform delay (8 mV / 50 mV)
+        display_delay="waveform",
+        scatter_window=((-150, 50), (-315, 50)),  # Fig. 5c,d: t_A range, t_B range relative to the 1-photon group
     ),
     "10": dict(
         name="ppm_10ghz",
@@ -44,6 +47,9 @@ DATASETS = {
         ylim=(1e-4, 1.15),
         model_db=28,  # analysis/build_pnr_model.py --dataset 10 (35-component refit of the 28 dB preamble)
         group_db=30,
+        # no waveform scan at this dataset's trigger levels: only the common-mode shift is removed
+        display_delay=None,
+        scatter_window=((-200, 100), (-400, 80)),
     ),
 }
 

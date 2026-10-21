@@ -26,8 +26,8 @@ uv sync                                   # analysis + notebook dependencies
 uv run python figshare_download.py --dataset ppm_20ghz_decoded ppm_10ghz_decoded waveform
 
 # 3. figures
-scripts/run_all.sh                 # Figs. 5-7, supplemental 10.75 GHz figures, SLOPE/GMM tables (~10 min)
-scripts/run_all.sh --notebooks     # also Figs. 2, 3, 4, S1 (executes the notebooks)
+scripts/run_all.sh                 # every figure of the paper and supplement + SLOPE/GMM tables (~10 min)
+scripts/run_all.sh --notebooks     # also execute the walk-through notebooks in notebooks/
 ```
 
 Outputs go to `ppm_20ghz/figs/`, `ppm_10ghz/figs/`, `waveform/figs/` and the `inter/` folders.
@@ -71,17 +71,25 @@ analysis/                  dataset-agnostic scripts, all take --dataset 10|20
   build_pnr_model.py       photon-number model (groups of GMM components) from a preamble fit
   pnr_refit.py             prior-free photon-number statistics (EM for group weights + common-mode shift)
   make_fig_pnr.py          photon-number attribution and statistics figures (Figs. 6, 7; 10.75 GHz: supplement)
+  display.py               common (t_A, t_B) display coordinates for all scatter/histogram panels
+  make_fig_waveform.py     Fig. 2 (detector waveform, trigger delay)
+  make_fig_slope.py        Fig. 3 (slope-based correction)
+  make_fig_gmm_intro.py    Fig. 4 (GMM of the two-threshold response, slot decision regions)
+  make_fig_ica.py          Fig. S1 (ICA projection)
+notebooks/                 walk-throughs that import analysis/ and plot intermediate steps
+  decoding_comparison.ipynb    offset scans, held-out calibration, McNemar test, all attenuations
+  photon_number_model.ipynb    KL graph, Louvain stability, fitted vs 2023 offsets, effect of the Poisson prior
 ppm_20ghz/
   src_decode/              decoder: raw .ttbin -> inter/decode_20GHz{dB}.0.json (Linux container, see below)
-  notebooks/               notebooks that are still the only source of a figure (Figs. 3, 4, S1)
-  deprecated/              superseded 2023 notebooks and their helper modules, outputs stripped, not maintained
+  ica_unmixing_nov2023.json  stored ICA matrix used by make_fig_ica.py
+  deprecated/              the original 2023 notebooks and helper modules (each says what replaced it), outputs stripped
   data/  inter/  figs/     filled by figshare_download.py / the scripts (git-ignored)
 ppm_10ghz/
   src_decode/  (+ docker/) decoder and the Linux container used for both datasets
   deprecated/              superseded 2023 notebooks
   data/  inter/  figs/
 waveform/
-  notebooks/main.ipynb     Fig. 2
+  deprecated/main.ipynb    the original Fig. 2 notebook
   data/  figs/
 scripts/run_all.sh         regenerate everything from the decoded data
 figshare_download.py       data downloader (users)
@@ -97,13 +105,13 @@ import them (`from analysis.fair_comparison import analyze`); nothing runs at im
 | Figure | Made by | Inputs |
 |---|---|---|
 | Fig. 1 (setup) | not code (drawn in Blender/Illustrator) | |
-| Fig. 2 waveform | `waveform/notebooks/main.ipynb` | `waveform` |
-| Fig. 3 slope correction | `ppm_20ghz/notebooks/decode_analysis.ipynb` | `ppm_20ghz_decoded` (22, 26, 30 dB) |
-| Fig. 4 GMM introduction | `ppm_20ghz/notebooks/gmm_intro_analysis_t.ipynb` | `ppm_20ghz_decoded` (26, 36 dB, `offset_correction_*.json`) |
+| Fig. 2 waveform | `python -m analysis.make_fig_waveform` | `waveform` |
+| Fig. 3 slope correction | `python -m analysis.make_fig_slope` | `ppm_20ghz_decoded` (22, 26, 30 dB), Fig. 5 table, `pnr_refit.json` |
+| Fig. 4 GMM introduction | `python -m analysis.make_fig_gmm_intro` | `ppm_20ghz_decoded` (26, 36 dB), Fig. 5 table, `pnr_refit.json` |
 | Fig. 5 PPM decoding | `python -m analysis.make_fig_decoding --dataset 20` | `ppm_20ghz_decoded` |
 | Fig. 6 photon-number attribution | `python -m analysis.make_fig_pnr --dataset 20` | `static_sim.json`, `pnr_refit.json`, Fig. 5 table |
 | Fig. 7 photon statistics | `python -m analysis.make_fig_pnr --dataset 20` | as Fig. 6 |
-| Fig. S1 ICA | `ppm_20ghz/notebooks/gmm_intro_analysis_t.ipynb` | 24 dB, `notebooks/vec.json` |
+| Fig. S1 ICA | `python -m analysis.make_fig_ica` | 24 dB, `ppm_20ghz/ica_unmixing_nov2023.json` |
 | Tables S (SLOPE vs GMM, 20 and 10.75 GHz) | `python -m analysis.fair_comparison --dataset 20` / `10` -> `inter/fair_comparison.json`; also `figs/ppm_decoding_<tag>_table.json` | decoded data |
 | 10.75 GHz supplemental figures | `make_fig_decoding` / `make_fig_pnr --dataset 10` | `ppm_10ghz_decoded` |
 
@@ -111,8 +119,11 @@ import them (`from analysis.fair_comparison import analyze`); nothing runs at im
 downloaded copy is identical). The 20 GHz scripts write `pnr_*_20GHz_light.pdf`; the manuscript includes
 them as `pnr_resolved_arrival_time_groupings_light.pdf` and `pnr_stats_light.pdf`.
 
-The notebooks use LaTeX for a few bold labels if `latex` is installed and fall back to matplotlib mathtext
-otherwise (the figure content is the same).
+All (t_A, t_B) panels share the display coordinates of `analysis/display.py`: the fitted common-mode offset
+of each attenuation is removed so the 1-photon group sits at t_A = 0, and (20 GHz) t_B is offset so that the
+1-photon t_B - t_A equals the 548.9 ps trigger delay measured from the waveform. The `offset_correction_*.json`
+files in `ppm_20ghz_decoded` are the hand-derived 2023 alignment vectors; they are used only by
+`notebooks/photon_number_model.ipynb` for comparison.
 
 ## Pipeline
 
@@ -163,8 +174,9 @@ Details: `ppm_10ghz/src_decode/docker/README.md`.
 
 One uv environment (`pyproject.toml`, `uv.lock`, Python 3.12) for all analysis:
 numpy >= 2.1 (2.0.x gives spurious matmul warnings with macOS Accelerate), scipy, scikit-learn, numba,
-matplotlib, orjson, networkx, pillow, pydantic 2, pyyaml, requests; Jupyter, `snsphd` (the author's plotting
-helpers), bokeh and plotly in the default `notebooks` group; `ruamel.yaml` and `nbstripout` in the `tools`
+matplotlib, orjson, networkx, pillow, pydantic 2, pyyaml, requests; Jupyter in the default `notebooks` group;
+`snsphd` (the author's plotting helpers), bokeh and plotly in the optional `deprecated` group (only for the
+2023 notebooks); `ruamel.yaml` and `nbstripout` in the `tools`
 group. The 2023 code used pydantic 1.9; `analysis/load_schema.py` is the pydantic-v2 port
 (`@validator` -> annotated numpy field type, `class Config` -> `model_config`).
 

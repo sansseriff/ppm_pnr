@@ -1194,13 +1194,15 @@ dependencies = [
 ]
 
 [package.dev-dependencies]
-notebooks = [
+deprecated = [
     { name = "bokeh" },
+    { name = "plotly" },
+    { name = "snsphd" },
+]
+notebooks = [
     { name = "ipykernel" },
     { name = "jupyter" },
     { name = "nbconvert" },
-    { name = "plotly" },
-    { name = "snsphd" },
 ]
 tools = [
     { name = "nbstripout" },
@@ -1223,13 +1225,15 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-notebooks = [
+deprecated = [
     { name = "bokeh", specifier = ">=3.6" },
+    { name = "plotly", specifier = ">=5.24" },
+    { name = "snsphd", specifier = ">=0.1.5" },
+]
+notebooks = [
     { name = "ipykernel", specifier = ">=6.29" },
     { name = "jupyter", specifier = ">=1.1" },
     { name = "nbconvert", specifier = ">=7.16" },
-    { name = "plotly", specifier = ">=5.24" },
-    { name = "snsphd", specifier = ">=0.1.5" },
 ]
 tools = [
     { name = "nbstripout", specifier = ">=0.8" },
