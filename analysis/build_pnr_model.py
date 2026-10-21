@@ -14,9 +14,10 @@ Steps (as in ppm_20ghz bi_gauss_community_detection.ipynb, made deterministic):
 
 The published models are
   10 GHz: ppm_10ghz/inter/static_sim.json = this script, --dataset 10 (35-component refit of the 28 dB preamble)
-  20 GHz: ppm_20ghz/inter/static_sim.json = ppm_20ghz/notebooks/bi_gauss_community_detection.ipynb (Nov 2023,
+  20 GHz: ppm_20ghz/inter/static_sim.json = ppm_20ghz/deprecated/bi_gauss_community_detection.ipynb (Nov 2023,
           gm_list[15] of the 24 dB file, unseeded Louvain). `--dataset 20` rebuilds it deterministically from the
-          same 35-component fit.
+          same 35-component fit and reproduces the published grouping (same partition in 90% of seeds).
+  10 GHz rebuild with the locked environment matches the published file to ~1e-11 relative.
 The refit uses sklearn's GaussianMixture, whose result can change slightly between scikit-learn versions.
 
 usage: uv run python -m analysis.build_pnr_model --dataset 10 [--out ppm_10ghz/inter/static_sim_rebuilt.json]

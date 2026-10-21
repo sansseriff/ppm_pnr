@@ -174,8 +174,11 @@ exactly, and the floating-point values agree to better than 1e-10 relative.
 
 ## What is not here
 
-- the 2023 exploration notebooks are in `*/deprecated/` (outputs stripped, code unchanged, not maintained);
-  they need files that are not on figshare (`inter/output.json`, `inter/output_pnr.json`, ~285 MB, made by
+- the 2023 notebooks whose methods are replaced by `analysis/` are in `*/deprecated/` (outputs stripped,
+  code unchanged, not maintained). Among them `ppm_20ghz/deprecated/bi_gauss_community_detection.ipynb`
+  made the published 20 GHz `static_sim.json`; `python -m analysis.build_pnr_model --dataset 20` rebuilds
+  the same grouping deterministically. They
+  need files that are not on figshare (`inter/output.json`, `inter/output_pnr.json`, ~285 MB, made by
   `deprecated/gmm_effectiveness_analysis*.ipynb` with `recompute=True`)
 - the Bokeh/Plotly web visualisations (`www/`, published at https://sansseriff.github.io/ppm_20ghz/),
   old intermediate folders (`inter/old*`), the `testing/` raw files of the 20 GHz run, and Illustrator files

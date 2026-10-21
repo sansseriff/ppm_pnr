@@ -24,7 +24,7 @@ DATASETS = {
         scatter_dbs=(28, 24),
         flagged_dbs=(),
         ylim=(1e-2, 1.15),
-        # photon-number model: built from the 24 dB preamble (bi_gauss_community_detection.ipynb);
+        # photon-number model: built from the 24 dB preamble (ppm_20ghz/deprecated/bi_gauss_community_detection.ipynb, rebuilt by build_pnr_model.py);
         # Fig. 6 shows the 26 dB data
         model_db=24,
         group_db=26,
