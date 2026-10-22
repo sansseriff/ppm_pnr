@@ -22,6 +22,7 @@ from matplotlib.patches import Ellipse
 from scipy.ndimage import gaussian_filter
 from scipy.special import logsumexp
 
+from analysis import style
 from analysis.datasets import decode_path, get
 from analysis.display import display_offset
 
@@ -57,7 +58,7 @@ def data_and_ellipses(ax, pts, gm, bins):
     for m, c in zip(gm["means"], gm["covs"]):
         u, s, _ = np.linalg.svd(c)
         ax.add_patch(Ellipse(m, 6 * np.sqrt(s[0]), 6 * np.sqrt(s[1]), angle=np.degrees(np.arctan2(u[1, 0], u[0, 0])),
-                             fill=False, edgecolor="black", lw=1.2, alpha=0.8))
+                             fill=False, edgecolor="black", lw=1.4, alpha=0.8))
 
 
 def slot_regions(ax, gm, T):
@@ -73,12 +74,18 @@ def slot_regions(ax, gm, T):
     best = np.argmax(dens, axis=0)
     significant = dens.max(axis=0) >= 2e-4
     for j in range(len(SLOTS)):
+        # as in the original notebook: contours in the squared (darkened) slot colormap on a log scale, and the
+        # density itself as a single-colour fill
+        rgb = plt.get_cmap(SLOT_CMAPS[j])(np.linspace(0, 1, 256))[:, :3]
+        norm = mpl.colors.LogNorm(vmin=1e-3, vmax=1)
+        ax.contour(xx, yy, dens[j] + 1e-5, levels=np.linspace(0.001, 1, 10)[1:], cmap=ListedColormap(rgb ** 2),
+                   norm=norm, alpha=0.6, linewidths=1.0)
+        ax.imshow(dens[j] + 1e-5, alpha=np.clip(dens[j], 0, 1) ** 0.8, origin="lower", extent=extent,
+                  cmap=ListedColormap([rgb[230], rgb[230]]), norm=norm, rasterized=True)
+    for j in range(len(SLOTS)):
         mask = gaussian_filter((significant & (best == j)).astype(float), 0.2)
         ax.imshow(np.ones_like(mask), alpha=0.2 * mask, origin="lower", extent=extent,
                   cmap=ListedColormap([REGION_COLORS[j]]), rasterized=True)
-        cmap = plt.get_cmap(SLOT_CMAPS[j])
-        ax.contour(xx, yy, dens[j], levels=np.linspace(0.001, 1, 10)[1:], colors=[cmap(0.75)], alpha=0.6,
-                   linewidths=1.0)
     return [plt.get_cmap(c)(0.9) for c in SLOT_CMAPS]
 
 
@@ -87,36 +94,33 @@ def main():
     T = cfg["slot_ps"]
     mu = {r["db"]: r["mu"] for r in json.loads(open(cfg["table"]).read())["rows"]}
 
-    mpl.rcParams.update({"font.size": 11, "axes.linewidth": 0.6, "mathtext.fontset": "dejavusans"})
+    style.apply()
     fig, axs = plt.subplots(1, 3, figsize=(14, 7))
     for ax, key in zip(axs[:2], "ab"):
         db, gm_idx = PANELS[key]
         pts, gm, bins = load(cfg, db, gm_idx)
         data_and_ellipses(ax, pts, gm, bins)
-        ax.text(XLIM[0] + 15, YLIM[1] - 20, f"components: {len(gm['weights'])}", fontsize=13, weight="bold")
-        ax.text(XLIM[0] + 15, YLIM[1] - 45, rf"$\mathbf{{\mu = {mu[db]:.2f}}}$", fontsize=13)
+        ax.text(XLIM[0] + 15, YLIM[1] - 20, style.bold(f"components: {len(gm['weights'])}"), fontsize=16,
+                usetex=style.USETEX)
+        ax.text(XLIM[0] + 15, YLIM[1] - 45, style.bold(rf"\mu = {mu[db]:.2f}"), fontsize=16, usetex=style.USETEX)
         for x, y, n in [(-50, 538, "1"), (-109, 410, "2"), (-141, 332, "3+")]:
-            ax.text(x, y, rf"$\mathbf{{|{n}\rangle}}$", ha="center", va="center", fontsize=13)
+            ax.text(x, y, style.ket(n), ha="center", va="center", fontsize=14, usetex=style.USETEX)
 
     db, gm_idx = PANELS["c"]
     _, gm, _ = load(cfg, db, gm_idx)
     label_colors = slot_regions(axs[2], gm, T)
     for k, name in zip(range(-3, 2), ["i-3", "i-2", "i-1", "i", "i+1"]):
-        axs[2].text(-104 + (k + 2) * T, 485 + (k + 2) * T, rf"$\mathbf{{{name}}}$", ha="center", va="center",
-                    fontsize=13, color=label_colors[k + 4])
+        axs[2].text(-104 + (k + 2) * T, 485 + (k + 2) * T, style.bold(name), ha="center", va="center",
+                    fontsize=14, usetex=style.USETEX, color=label_colors[k + 4])
 
     for ax, lab in zip(axs, "abc"):
         ax.set_xlim(*XLIM)
         ax.set_ylim(*YLIM)
         ax.set_aspect("equal")
         ax.set_xlabel(r"$t_A$ (ps)")
-        ax.text(-0.18, 1.06, f"{lab})", transform=ax.transAxes, fontsize=17, va="top")
+        ax.text(-0.18, 1.06, f"{lab})", transform=ax.transAxes, fontsize=19, va="top")
     axs[0].set_ylabel(r"$t_B$ (ps)")
-    fig.tight_layout()
-    out = cfg["figs"] / "gmm_intro_analysis_t_light"
-    fig.savefig(f"{out}.pdf", dpi=300)
-    fig.savefig(f"{out}.png", dpi=100)
-    print(f"-> {out}.pdf")
+    style.save(fig, cfg["figs"] / "gmm_intro_analysis_t", png_dpi=100)
 
 
 if __name__ == "__main__":

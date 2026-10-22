@@ -18,7 +18,9 @@ import matplotlib as mpl
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
+from snsphd.layout import bisect
 
+from analysis import style
 from analysis.datasets import REPO
 
 DATA = REPO / "waveform" / "data"
@@ -67,23 +69,26 @@ def main():
     delay = one_photon_delay(scan, volts)
     (DATA / "tigger_level_time_difference.json").write_text(json.dumps(delay))
 
-    mpl.rcParams.update({"font.size": 10, "axes.linewidth": 0.6, "mathtext.fontset": "dejavusans"})
+    style.apply()
     fig = plt.figure(figsize=(8, 8))
-    ax_top = fig.add_axes([0.1, 0.80, 0.85, 0.17])
-    ax = fig.add_axes([0.1, 0.30, 0.85, 0.42])
-    ax_bot = fig.add_axes([0.1, 0.07, 0.85, 0.16])
+    bottom, top_middle = bisect([0, 0, 1, 1], direction="horiz", offset=0.2, spacing=0.07)
+    middle, top = bisect(top_middle, direction="horiz", offset=1 - 0.2 / 0.8, spacing=0.07 / 0.8)
+    ax = fig.add_axes(middle)
+    ax_bot = fig.add_axes(bottom)
+    ax_top = fig.add_axes(top)
 
     viridis = plt.get_cmap("viridis")(np.linspace(0, 1, 256))
     t = np.arange(scan.shape[1])
     ax.imshow(scan, cmap=mcolors.LinearSegmentedColormap.from_list("v", viridis), aspect="auto",
               extent=[t[0], t[-1], *V_RANGE_MV], origin="lower")
+    ax.grid(False)
     for v, (t0, t1), label, lx in [(TRIGGER_A_MV, (50, 300), f"Trigger A: {TRIGGER_A_MV} mV", 600),
                                    (TRIGGER_B_MV, (450, 900), f"Trigger B: {TRIGGER_B_MV} mV", 150)]:
         ax.axhline(v, color=TRIGGER_COLOR, alpha=0.3)
         ax.plot([t0, t1], [v, v], color=TRIGGER_COLOR)
         for tt in (t0, t1):
             ax.plot([tt, tt], [v - 0.8, v + 0.8], color=TRIGGER_COLOR)
-        ax.text(lx, v + 2, label, ha="center", va="center", color=TRIGGER_COLOR, fontsize=13, alpha=0.6)
+        ax.text(lx, v + 2, label, ha="center", va="center", color=TRIGGER_COLOR, fontsize=15, alpha=0.5)
     ax.set_xlabel("Time (ps)")
     ax.set_ylabel("Voltage (mV)")
 
@@ -92,15 +97,16 @@ def main():
         a.plot(t[t0:t1], scan[row_at(volts, v), t0:t1], color="k")
         a.set_xlabel("Time (ps)")
         a.set_ylabel("Counts")
-        connect(fig, ax, (t0, v), a, corners[0], color="lightgray", alpha=0.7)
-        connect(fig, ax, (t1, v), a, corners[1], color="lightgray", alpha=0.7)
+        connect(fig, ax, (t0, v), a, corners[0], color="lightgray", alpha=0.5, solid_capstyle="round")
+        connect(fig, ax, (t1, v), a, corners[1], color="lightgray", alpha=0.5, solid_capstyle="round")
+        for sp in a.spines.values():  # light-grey frame around each zoomed trace
+            sp.set_visible(True), sp.set_color("lightgray"), sp.set_linewidth(1.5)
     for x, y, n in [(780, 300, "1"), (620, 200, "2"), (555, 110, "3")]:
-        ax_top.text(x, y, rf"$\mathbf{{|{n}\rangle}}$", fontsize=14)
+        ax_top.text(x, y, style.ket(n), fontsize=16, usetex=style.USETEX)
 
     FIGS.mkdir(parents=True, exist_ok=True)
-    fig.savefig(FIGS / "waveform_light.pdf", dpi=300)
-    fig.savefig(FIGS / "waveform_light.png", dpi=110)
-    print(f"1-photon trigger delay {delay:.2f} ps -> {FIGS / 'waveform_light.pdf'}")
+    print(f"1-photon trigger delay {delay:.2f} ps")
+    style.save(fig, FIGS / "waveform")
 
 
 if __name__ == "__main__":

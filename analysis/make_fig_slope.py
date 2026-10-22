@@ -19,7 +19,9 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import orjson
+from snsphd.layout import bisect
 
+from analysis import style
 from analysis.datasets import decode_path, get
 from analysis.display import display_offset, one_photon_center
 
@@ -33,11 +35,13 @@ def main():
     data = {db: orjson.loads(open(decode_path(cfg, db), "rb").read()) for db in HIST_DBS}
     colors = plt.cm.viridis(np.linspace(0, 1, 4))
 
-    mpl.rcParams.update({"font.size": 10, "axes.linewidth": 0.6, "mathtext.fontset": "dejavusans"})
+    style.apply()
+    left, right = bisect([0, 0, 1, 1], direction="vert", offset=0.5, spacing=0.12)
+    left_bottom, left_top = bisect(left, direction="horiz", offset=0.5, spacing=0.12)
     fig = plt.figure(figsize=(11, 5))
-    ax_a = fig.add_axes([0.07, 0.58, 0.38, 0.38])
-    ax_b = fig.add_axes([0.07, 0.11, 0.38, 0.36])
-    ax_c = fig.add_axes([0.56, 0.11, 0.42, 0.85])
+    ax_a = fig.add_axes(left_top)
+    ax_b = fig.add_axes(left_bottom)
+    ax_c = fig.add_axes(right)
 
     # a) slope vs t_A at one attenuation, with the calibration curve
     h = data[PANEL_A_DB]["hist_data"]
@@ -55,7 +59,7 @@ def main():
     ax_a.set_ylim(-160, 40)
     ax_a.set_xlabel(r"$\Delta t_{BA}$ (ps)")
     ax_a.set_ylabel(r"$t_A$ (ps)", labelpad=0)
-    ax_a.text(0.04, 0.93, rf"$\mu$ = {mu[PANEL_A_DB]:.2f}", transform=ax_a.transAxes, va="top", fontsize=13)
+    ax_a.text(0.05, 0.95, rf"$\mu$ = {mu[PANEL_A_DB]:.2f}", transform=ax_a.transAxes, ha="left", va="top", fontsize=15)
 
     # b) slope histograms (display offsets differ between files only by a common-mode shift, which does not
     #    change Delta t_BA, so the curves are directly comparable)
@@ -66,7 +70,7 @@ def main():
     ax_b.set_xlim(ax_a.get_xlim())
     ax_b.set_xlabel(r"$\Delta t_{BA}$ (ps)")
     ax_b.set_ylabel("counts")
-    ax_b.legend(fancybox=False, framealpha=0.1)
+    ax_b.legend(fancybox=False, framealpha=0.1).get_frame().set_linewidth(1.5)
 
     # c) slope-corrected time tags
     for k, db in enumerate(HIST_DBS):
@@ -82,17 +86,14 @@ def main():
     ax_c.set_xticks([-75, -50, -25, 0, 25, 50, 75])
     ax_c.set_xlabel(r"$\tilde{t}_B$ (ps)")
     ax_c.set_ylabel("counts")
-    ax_c.legend(fancybox=False, framealpha=0.1)
+    ax_c.legend(fancybox=False, framealpha=0.1).get_frame().set_linewidth(1.5)
 
-    for ax, lab, y in [(ax_a, "a)", 1.12), (ax_b, "b)", 1.12), (ax_c, "c)", 1.05)]:
-        ax.text(-0.12, y, lab, transform=ax.transAxes, fontsize=16, va="top")
+    for ax, lab, y in [(ax_a, "a)", 1.08), (ax_b, "b)", 1.08), (ax_c, "c)", 1.05)]:
+        ax.text(-0.10, y, lab, transform=ax.transAxes, fontsize=19, va="top")
     for x, y, n in [(c1_dt - 45, 12, "1"), (c1_dt - 110, -35, "2"), (c1_dt - 175, -80, "3+")]:
-        ax_a.text(x, y, rf"$\mathbf{{|{n}\rangle}}$", fontsize=13)
+        ax_a.text(x, y, style.ket(n), fontsize=16, usetex=style.USETEX)
 
-    out = cfg["figs"] / "slope_cancellation_light"
-    fig.savefig(f"{out}.pdf", dpi=300)
-    fig.savefig(f"{out}.png", dpi=110)
-    print(f"-> {out}.pdf")
+    style.save(fig, cfg["figs"] / "slope_cancellation")
 
 
 if __name__ == "__main__":

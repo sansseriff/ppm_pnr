@@ -127,28 +127,74 @@ files in `ppm_20ghz_decoded` are the hand-derived 2023 alignment vectors; they a
 
 ## Pipeline
 
+Data flow from the raw time tags to the figures. Dashed arrows: the 2023 notebook (now in `*/deprecated/`)
+that each script replaces.
+
+```mermaid
+flowchart TD
+    raw[("raw .ttbin + ground_truth.zip<br/>figshare *_raw")]
+    wfd[("waveform/data/decent.npy<br/>figshare waveform")]
+    dec["src_decode/redecode.py + JitRead_*.py (Linux container)<br/>software PLL, t_A/t_B pairing, preamble slope lookup,<br/>GaussianMixture fits of the preamble, slot assignment"]
+    djson[("inter/decode_*GHz*.0.json<br/>figshare *_decoded")]
+
+    raw --> dec --> djson
+
+    fair["analysis/fair_comparison.py<br/>SLOPE and GMM decisions, held-out offsets, McNemar"]
+    fjson[("inter/fair_comparison.json<br/>inter/fair_events_*.npz")]
+    mfd["analysis/make_fig_decoding.py<br/>mu calibration (vacuum fraction + extrapolation)"]
+    table[("figs/ppm_decoding_*_table.json")]
+    build["analysis/build_pnr_model.py<br/>35-component GMM, filter, KL graph, Louvain"]
+    sim[("inter/static_sim.json<br/>photon groups C1 .. C5+")]
+    refit["analysis/pnr_refit.py<br/>EM: group weights, background, timing shift"]
+    rjson[("inter/pnr_refit.json")]
+    display["analysis/display.py<br/>common display coordinates"]
+    sty["analysis/style.py<br/>snsphd phd_style, LaTeX callouts"]
+
+    djson --> fair --> fjson --> mfd --> table
+    djson --> build --> sim --> refit
+    djson --> refit
+    table --> refit --> rjson
+    wfd --> mfw["analysis/make_fig_waveform.py"]
+    mfw --> delay[("tigger_level_time_difference.json")]
+    delay --> display
+    rjson --> display
+
+    mfd --> F5["Fig. 5 / Fig. S (10.75 GHz)<br/>PPM decoding"]
+    fjson --> TS["Tables S1, S2"]
+    mfw --> F2["Fig. 2 waveform"]
+    display --> mfs["analysis/make_fig_slope.py"] --> F3["Fig. 3 slope correction"]
+    display --> mfg["analysis/make_fig_gmm_intro.py"] --> F4["Fig. 4 GMM"]
+    display --> mfi["analysis/make_fig_ica.py<br/>FastICA, narrow-kernel contrast"] --> FS1["Fig. S1 ICA"]
+    rjson --> mfp["analysis/make_fig_pnr.py<br/>joint slot + photon-number attribution"]
+    sim --> mfp
+    mfp --> F6["Fig. 6 / Fig. S attribution"]
+    mfp --> F7["Fig. 7 / Fig. S statistics"]
+    table --> mfs & mfg & mfi
+    sty -.- mfw & mfs & mfg & mfi & mfd & mfp
+
+    subgraph old["2023 notebooks (deprecated/)"]
+        nbD["Decode.ipynb"]
+        nbW["waveform main.ipynb"]
+        nbS["decode_analysis.ipynb"]
+        nbG["gmm_intro_analysis_t.ipynb"]
+        nbE["gmm_effectiveness_analysis.ipynb"]
+        nbB["bi_gauss_community_detection.ipynb"]
+        nbP["gmm_effectiveness_analysis_pnr_slim.ipynb"]
+    end
+    nbD -.-> dec
+    nbW -.-> mfw
+    nbS -.-> mfs
+    nbG -.-> mfg
+    nbG -.-> mfi
+    nbE -.-> fair
+    nbE -.-> mfd
+    nbB -.-> build
+    nbP -.-> refit
+    nbP -.-> mfp
 ```
- raw .ttbin + ground_truth.zip                         (figshare *_raw)
-        |  src_decode/JitRead_*.py  (Linux container: Swabian TimeTagger, sklearn 1.2.2)
-        |    software PLL on the AWG clock, pairing of t_A/t_B, preamble slope-correction lookup,
-        |    23 (20 GHz) / 10 (10 GHz) GaussianMixture fits of the preamble, frame/slot assignment
-        v
- inter/decode_<f>GHz{dB}.0.json                        (figshare *_decoded)
-        |------------------------------------------------------------.
-        |  analysis/fair_comparison.py                                |  analysis/build_pnr_model.py
-        |    SLOPE and GMM decisions, CV offsets, McNemar             |    filter components, KL graph,
-        v                                                             |    Louvain -> photon groups C1..C5+
- inter/fair_comparison.json, inter/fair_events_*.npz                  v
-        |  analysis/make_fig_decoding.py                       inter/static_sim.json
-        v                                                             |  analysis/pnr_refit.py
- figs/ppm_decoding_*  (Fig. 5) + *_table.json (mu calibration) ------>|    EM: group weights + shift
-                                                                      v
-                                                               inter/pnr_refit.json
-                                                                      |  analysis/make_fig_pnr.py
-                                                                      v
-                                                    figs/pnr_resolved_arrival_time_groupings_*, pnr_stats_*
-                                                                      (Figs. 6, 7)
-```
+
+`scripts/run_all.sh` runs the analysis steps in this order. The notebooks in `notebooks/` are read-only
+walk-throughs that import the same functions.
 
 ## Decoding the raw data (optional)
 
@@ -174,10 +220,12 @@ Details: `ppm_10ghz/src_decode/docker/README.md`.
 
 One uv environment (`pyproject.toml`, `uv.lock`, Python 3.12) for all analysis:
 numpy >= 2.1 (2.0.x gives spurious matmul warnings with macOS Accelerate), scipy, scikit-learn, numba,
-matplotlib, orjson, networkx, pillow, pydantic 2, pyyaml, requests; Jupyter in the default `notebooks` group;
-`snsphd` (the author's plotting helpers), bokeh and plotly in the optional `deprecated` group (only for the
-2023 notebooks); `ruamel.yaml` and `nbstripout` in the `tools`
-group. The 2023 code used pydantic 1.9; `analysis/load_schema.py` is the pydantic-v2 port
+matplotlib, orjson, networkx, pillow, pydantic 2, pyyaml, requests, and `snsphd` (the author's plotting
+style, used by every figure script through `analysis/style.py`); Jupyter in the default `notebooks` group;
+bokeh and plotly in the optional `deprecated` group (only for the 2023 notebooks); `ruamel.yaml` and
+`nbstripout` in the `tools` group. A TeX installation with `latex` and `dvipng` (for example TinyTeX, found
+automatically in `~/Library/TinyTeX`) is optional: with it, the ket and mu callouts in the figures are set in
+LaTeX as in the paper; without it they fall back to bold mathtext. The 2023 code used pydantic 1.9; `analysis/load_schema.py` is the pydantic-v2 port
 (`@validator` -> annotated numpy field type, `class Config` -> `model_config`).
 
 The analysis results do not depend on the package versions beyond floating-point rounding: with the locked

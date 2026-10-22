@@ -21,6 +21,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 
+from analysis import style
 from analysis.datasets import get
 from analysis.display import display_offset, one_photon_center
 from analysis.fair_comparison import cached_analysis
@@ -116,8 +117,7 @@ def main():
     frac = lambda k: k / n_tot
     ferr = lambda k: np.sqrt(np.maximum(k, 1)) / n_tot
 
-    mpl.rcParams.update({"font.size": 9, "axes.linewidth": 0.6, "font.family": "sans-serif",
-                         "mathtext.fontset": "dejavusans"})
+    style.apply()
     fig = plt.figure(figsize=(13, 6.5))
     ax_a = fig.add_axes([0.07, 0.42, 0.41, 0.55])
     ax_b = [fig.add_axes([0.07 + i * 0.145, 0.07, 0.12, 0.24]) for i in range(3)]
@@ -155,7 +155,11 @@ def main():
     ax_a.set_ylabel("fraction of frames")
     ax_a.grid(which="major", alpha=0.25)
     ax_a.grid(which="minor", alpha=0.08)
-    ax_a.legend(frameon=False, loc="upper left", fontsize=8)
+    h, l = ax_a.get_legend_handles_labels()
+    order = [l.index(k) for k in ("correct GMM", "correct SLOPE", "incorrect GMM", "incorrect SLOPE", "missing")]
+    # 20 GHz: upper left as in the 2023 figure; 10 GHz: the curves fill the upper left, so lower right
+    legend_at = dict(loc="upper left", bbox_to_anchor=(0.0, 0.96)) if cfg["key"] == "20" else dict(loc="lower right")
+    ax_a.legend([h[i] for i in order], [l[i] for i in order], frameon=False, fontsize=10, **legend_at)
     ax_a.text(-0.12, 1.02, "a)", transform=ax_a.transAxes, fontsize=12, va="top")
 
     # ---- b) decoded images (GMM, stream 0)
@@ -170,10 +174,14 @@ def main():
         ax.imshow(decoded_image(sym, cfg["bits"]), interpolation="nearest")
         ax.set_xticks([]), ax.set_yticks([])
         for sp in ax.spines.values():
-            sp.set_edgecolor(MU_COLORS[k]), sp.set_linewidth(2.5)
-        ax.set_title(rf"$\mu={mu_all[i]:.2f}$    {ok.mean() * raw_rate:.1f} Mbit/s", fontsize=8,
-                     color=MU_COLORS[k], y=-0.16)
+            sp.set_visible(True), sp.set_edgecolor(MU_COLORS[k]), sp.set_linewidth(2.5)
+        ax.text(0.0, -0.04, style.bold(rf"\mu = {mu_all[i]:.2f}"), transform=ax.transAxes, fontsize=10,
+                color=MU_COLORS[k], va="top", ha="left", usetex=style.USETEX)
+        ax.text(1.0, -0.04, f"{ok.mean() * raw_rate:.1f} Mbit/s", transform=ax.transAxes, fontsize=9,
+                color=MU_COLORS[k], va="top", ha="right")
         ax_a.axvline(mu_all[i], color=MU_COLORS[k], ls="--", alpha=0.35, lw=1)
+        ax_a.text(mu_all[i] * 1.05, 0.08 if k == 0 else 0.4, style.bold(rf"\mu = {mu_all[i]:.2f}"), rotation=90,
+                  ha="left", va="center", fontsize=14, color=MU_COLORS[k], usetex=style.USETEX)
     ax_b[0].text(-0.2, 1.0, "b)", transform=ax_b[0].transAxes, fontsize=12, va="top")
 
     # ---- c, d) scatter of detections relative to the true slot
@@ -201,16 +209,16 @@ def main():
         ax.set_ylabel(r"$t_B$ (ps)")
         i = int(np.where(dbs == db)[0][0])
         k = list(cfg["image_dbs"]).index(db) if db in cfg["image_dbs"] else 0
-        ax.text(0.04, 0.97, rf"$\mu = {mu_all[i]:.2f}$", transform=ax.transAxes, fontsize=12,
-                color=MU_COLORS[k], va="top", weight="bold")
+        ax.text(0.04, 0.96, style.bold(rf"\mu = {mu_all[i]:.2f}"), transform=ax.transAxes, fontsize=18,
+                color=MU_COLORS[k], va="center", usetex=style.USETEX)
         ax.text(-0.18, 1.0, label, transform=ax.transAxes, fontsize=12, va="top")
-        lg = ax.legend(frameon=False, loc="lower right", fontsize=7, markerscale=4)
+        lg = ax.legend(numpoints=1, frameon=False, loc="lower right", fontsize=8,
+                       markerscale=4)
         for h in lg.legend_handles:
             h.set_alpha(0.8)
 
     os.makedirs(os.path.dirname(cfg["out"]), exist_ok=True)
-    fig.savefig(cfg["out"] + "_light.pdf", dpi=300)
-    fig.savefig(cfg["out"] + "_light.png", dpi=150)
+    style.save(fig, cfg["out"], png_dpi=150)
 
     table = dict(
         mu_extrapolated_db=dbs[mu_extrapolated].tolist(), raw_rate_mbps=raw_rate,

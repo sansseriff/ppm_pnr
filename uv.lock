@@ -1191,13 +1191,13 @@ dependencies = [
     { name = "requests" },
     { name = "scikit-learn" },
     { name = "scipy" },
+    { name = "snsphd" },
 ]
 
 [package.dev-dependencies]
 deprecated = [
     { name = "bokeh" },
     { name = "plotly" },
-    { name = "snsphd" },
 ]
 notebooks = [
     { name = "ipykernel" },
@@ -1222,13 +1222,13 @@ requires-dist = [
     { name = "requests", specifier = ">=2.32" },
     { name = "scikit-learn", specifier = ">=1.5" },
     { name = "scipy", specifier = ">=1.14" },
+    { name = "snsphd", specifier = ">=0.2.5" },
 ]
 
 [package.metadata.requires-dev]
 deprecated = [
     { name = "bokeh", specifier = ">=3.6" },
     { name = "plotly", specifier = ">=5.24" },
-    { name = "snsphd", specifier = ">=0.1.5" },
 ]
 notebooks = [
     { name = "ipykernel", specifier = ">=6.29" },

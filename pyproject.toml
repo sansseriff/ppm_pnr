@@ -19,6 +19,7 @@ dependencies = [
     "pydantic>=2.10",
     "pyyaml>=6",
     "requests>=2.32",
+    "snsphd>=0.2.5",
 ]
 
 [dependency-groups]
@@ -30,7 +31,6 @@ notebooks = [
 ]
 # only to re-run the original 2023 notebooks in */deprecated/ (not maintained): uv sync --group deprecated
 deprecated = [
-    "snsphd>=0.1.5",
     "bokeh>=3.6",
     "plotly>=5.24",
 ]

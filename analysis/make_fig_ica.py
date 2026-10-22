@@ -21,7 +21,9 @@ import orjson
 from scipy.ndimage import gaussian_filter1d
 from scipy.signal import find_peaks
 from sklearn.decomposition import FastICA
+from snsphd.layout import bisect
 
+from analysis import style
 from analysis.datasets import decode_path, get
 from analysis.display import display_offset
 
@@ -73,35 +75,49 @@ def main():
     proj = xc @ W
     mixing = np.linalg.inv(W)  # rows: directions in (t_A, t_B) along which each component varies
 
-    mpl.rcParams.update({"font.size": 10, "axes.linewidth": 0.6, "mathtext.fontset": "dejavusans"})
+    style.apply()
     fig = plt.figure(figsize=(11, 4))
-    ax1 = fig.add_axes([0.06, 0.13, 0.25, 0.80])
-    ax2 = fig.add_axes([0.40, 0.56, 0.57, 0.36])
-    ax3 = fig.add_axes([0.40, 0.13, 0.57, 0.36], sharex=ax2)
+    left, right = bisect([0, 0, 1, 1], direction="vert", offset=0.3, spacing=0.10)
+    right_bottom, right_top = bisect(right, direction="horiz", offset=0.5, spacing=0.09)
+    ax1 = fig.add_axes(left)
+    ax2 = fig.add_axes(right_top)
+    ax3 = fig.add_axes(right_bottom)
+    ax2.sharex(ax3)
 
     ax1.hist2d(disp[:, 0], disp[:, 1], bins=(np.arange(-400, 300), np.arange(0, 900)), norm=mpl.colors.LogNorm(),
-               density=True, cmap="viridis", rasterized=True)
+               alpha=0.8, density=True, cmap="viridis", rasterized=True)
     c = disp.mean(axis=0)
     # lines of constant feature x run along the other component's mixing direction (dotted), and vice versa
     for row, color in [(1, "red"), (0, "purple")]:
         d = mixing[row] / np.linalg.norm(mixing[row])
         ax1.plot(c[0] + np.array([-250, 250]) * d[0], c[1] + np.array([-250, 250]) * d[1], color=color, lw=2,
-                 ls=":", alpha=0.35)
+                 ls=":", alpha=0.27)
+    # the two projection vectors (columns of W) as arrows from the centre of the data, as in the 2023 figure:
+    # directions only, the one perpendicular to the photon-number line long and pointing right, the other
+    # short and pointing up
+    d = W.T / np.linalg.norm(W, axis=0)[:, None]
+    d[1] *= np.sign(d[1, 0]) or 1
+    d[0] *= np.sign(d[0, 1]) or 1
+    arrows = d * np.array([[0.7], [2.7]])
+    ax1.quiver([c[0], c[0]], [c[1], c[1]], arrows[:, 0], arrows[:, 1], zorder=11, width=0.01, scale=6)
     ax1.set_xlim(c[0] - 100, c[0] + 140)
     ax1.set_ylim(c[1] - 150, c[1] + 240)
     ax1.set_aspect("equal", adjustable="box")
     ax1.set_xlabel(r"$t_A$ (ps)")
     ax1.set_ylabel(r"$t_B$ (ps)")
-    ax1.text(0.06, 0.94, rf"$\mathbf{{\mu = {mu[DB]:.2f}}}$", transform=ax1.transAxes, va="center", fontsize=13)
+    ax1.text(0.06, 0.94, style.bold(rf"\mu = {mu[DB]:.2f}"), transform=ax1.transAxes, va="center", fontsize=16,
+              usetex=style.USETEX)
     for x, y, n in [(40, 190, "1"), (-20, 50, "2"), (-48, -5, "3"), (-62, -36, "4"), (-78, -69, "5+")]:
-        ax1.text(c[0] + x, c[1] + y, rf"$\mathbf{{|{n}\rangle}}$", ha="center", va="center", fontsize=12)
+        ax1.text(c[0] + x, c[1] + y, style.ket(n), ha="center", va="center", fontsize=14, usetex=style.USETEX)
 
     lo, hi = np.percentile(proj[:, 0], [0.2, 99.8])
     lo, hi = lo - 0.1 * (hi - lo), hi + 0.05 * (hi - lo)
     ylo, yhi = np.percentile(proj[:, 1], [0.2, 99.8])
     # bins much wider than the 1 ps time-tag quantization, so the transformed grid does not alias into stripes
+    ax2.scatter(proj[:, 0], proj[:, 1], alpha=0.02, rasterized=True, s=4, color="black")
     ax2.hist2d(proj[:, 0], proj[:, 1], bins=[np.arange(lo, hi, 0.5), np.arange(ylo, yhi, 2.5)],
-               norm=mpl.colors.LogNorm(), density=True, cmap="viridis", rasterized=True)
+               norm=mpl.colors.LogNorm(), alpha=0.8, density=True, cmap="viridis", rasterized=True)
+    ax2.set_ylim(ylo, yhi)
     ax2.set_xlim(lo, hi)
     ax2.set_ylabel("ICA feature space y")
     hist, edges = np.histogram(proj[:, 0], bins=np.arange(lo, hi, 0.5))
@@ -113,18 +129,16 @@ def main():
     pk, prop = find_peaks(smooth, prominence=smooth.max() * 0.03)
     pk = np.sort(pk[np.argsort(-prop["prominences"])][:5])
     for p, n in zip(pk, LABELS[-len(pk):] if len(pk) < 5 else LABELS):
-        ax3.text(edges[p], smooth[p] * 1.08 + 0.03 * smooth.max(), rf"$\mathbf{{|{n}\rangle}}$", ha="center", va="bottom",
-                 fontsize=11)
+        ax3.text(edges[p], smooth[p] * 1.08 + 0.03 * smooth.max(), style.ket(n), ha="center", va="bottom",
+                 fontsize=12, usetex=style.USETEX)
     ax3.set_ylim(0, smooth.max() * 1.3)
-    for ax, lab, xy in [(ax1, "a)", (-0.25, 1.08)), (ax2, "b)", (-0.08, 1.19)), (ax3, "c)", (-0.08, 1.05))]:
-        ax.text(*xy, lab, transform=ax.transAxes, fontsize=16, va="top")
+    for ax, lab, xy in [(ax1, "a)", (-0.1, 1.08)), (ax2, "b)", (-0.05, 1.19)), (ax3, "c)", (-0.05, 1.02))]:
+        ax.text(*xy, lab, transform=ax.transAxes, fontsize=19, va="top")
 
-    out = cfg["figs"] / "ICA_component_analysis_light"
-    fig.savefig(f"{out}.pdf", dpi=300)
-    fig.savefig(f"{out}.png", dpi=110)
+    style.save(fig, cfg["figs"] / "ICA_component_analysis")
     ang = [np.degrees(np.arctan2(m[1], m[0])) % 180 for m in mixing]
     print(f"mixing directions: photon-number component {ang[0]:.1f} deg, other {ang[1]:.1f} deg; "
-          f"{len(pk)} peaks labelled -> {out}.pdf")
+          f"{len(pk)} peaks labelled")
 
 
 if __name__ == "__main__":
