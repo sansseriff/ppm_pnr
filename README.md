@@ -79,9 +79,9 @@ analysis/                  dataset-agnostic scripts, all take --dataset 10|20
 notebooks/                 walk-throughs that import analysis/ and plot intermediate steps
   decoding_comparison.ipynb    offset scans, held-out calibration, McNemar test, all attenuations
   photon_number_model.ipynb    KL graph, Louvain stability, fitted vs 2023 offsets, effect of the Poisson prior
+  ica_contrast.ipynb           why FastICA's default contrast misses the photon-number axis, and the narrow-kernel fix
 ppm_20ghz/
   src_decode/              decoder: raw .ttbin -> inter/decode_20GHz{dB}.0.json (Linux container, see below)
-  ica_unmixing_nov2023.json  stored ICA matrix used by make_fig_ica.py
   deprecated/              the original 2023 notebooks and helper modules (each says what replaced it), outputs stripped
   data/  inter/  figs/     filled by figshare_download.py / the scripts (git-ignored)
 ppm_10ghz/
@@ -111,7 +111,7 @@ import them (`from analysis.fair_comparison import analyze`); nothing runs at im
 | Fig. 5 PPM decoding | `python -m analysis.make_fig_decoding --dataset 20` | `ppm_20ghz_decoded` |
 | Fig. 6 photon-number attribution | `python -m analysis.make_fig_pnr --dataset 20` | `static_sim.json`, `pnr_refit.json`, Fig. 5 table |
 | Fig. 7 photon statistics | `python -m analysis.make_fig_pnr --dataset 20` | as Fig. 6 |
-| Fig. S1 ICA | `python -m analysis.make_fig_ica` | 24 dB, `ppm_20ghz/ica_unmixing_nov2023.json` |
+| Fig. S1 ICA | `python -m analysis.make_fig_ica` (FastICA with a narrow-kernel contrast; see `notebooks/ica_contrast.ipynb`) | `ppm_20ghz_decoded` (24 dB), Fig. 5 table |
 | Tables S (SLOPE vs GMM, 20 and 10.75 GHz) | `python -m analysis.fair_comparison --dataset 20` / `10` -> `inter/fair_comparison.json`; also `figs/ppm_decoding_<tag>_table.json` | decoded data |
 | 10.75 GHz supplemental figures | `make_fig_decoding` / `make_fig_pnr --dataset 10` | `ppm_10ghz_decoded` |
 

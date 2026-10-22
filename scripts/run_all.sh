@@ -66,7 +66,7 @@ fi
 if [[ $NOTEBOOKS == 1 ]]; then
   # walk-through notebooks (they only call analysis/ and plot); executed copies go to a temp dir
   out=$(mktemp -d)
-  for nb in notebooks/decoding_comparison.ipynb notebooks/photon_number_model.ipynb; do
+  for nb in notebooks/decoding_comparison.ipynb notebooks/photon_number_model.ipynb notebooks/ica_contrast.ipynb; do
     run uv run jupyter nbconvert --to notebook --execute --ExecutePreprocessor.timeout=3600 --output-dir "$out" "$nb"
   done
   echo "executed notebooks in $out"

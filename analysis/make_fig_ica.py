@@ -1,13 +1,13 @@
 """
-Fig. S1 (supplement): linear (ICA) projection of the two-threshold response that separates photon numbers
-(20 GHz preamble data, 24 dB).
+Fig. S1 (supplement): independent component analysis (ICA) of the two-threshold response, which
+separates photon numbers along one independent component (20 GHz preamble data, 24 dB).
 
-The projection is the ICA unmixing matrix from a FastICA fit made in Nov 2023
-(ppm_20ghz/ica_unmixing_nov2023.json), normalized to unit determinant and rotated by -3 degrees, a
-rotation chosen by eye to sharpen the projected peaks. A FastICA refit of the same data with current
-scikit-learn (any seed) converges to a different direction (~144 deg) that resolves only two peaks, so
-the stored matrix is used to reproduce the published figure. Any projection direction between ~60 and
-~120 degrees resolves the five photon-number peaks; the stored one is at ~103.5 degrees.
+ICA is scikit-learn's FastICA with a custom contrast function: a narrow Gaussian kernel,
+G(u) = -exp(-a u^2 / 2) / a with a = 32, in place of the default log cosh. FastICA approximates
+negentropy by E[G(u)]; the default contrasts weigh the tails of the distribution, so for these multi-peaked
+data they converge to a direction dominated by the large gap between the 1-photon cluster and the rest
+(only two peaks resolved). The narrow kernel is sensitive to the individual photon-number peaks; the result
+is the same for every random initialization and for 24 <= a <= 48 (see notebooks/ica_contrast.ipynb).
 
 usage: uv run python -m analysis.make_fig_ica
 """
@@ -18,18 +18,47 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import orjson
+from scipy.ndimage import gaussian_filter1d
+from scipy.signal import find_peaks
+from sklearn.decomposition import FastICA
 
 from analysis.datasets import decode_path, get
 from analysis.display import display_offset
 
 DB = 24
-ROTATION_DEG = -3.0
-UNMIXING = "ica_unmixing_nov2023.json"
+CROP_PS = 250  # detections within this distance (per axis) of the mean are used
+KERNEL_A = 32.0
+LABELS = ["5+", "4", "3", "2", "1"]  # photon numbers of the five peaks, left to right along feature x
 
 
-def rotation(deg):
-    t = np.radians(deg)
-    return np.array([[np.cos(t), -np.sin(t)], [np.sin(t), np.cos(t)]])
+def narrow_gaussian_contrast(a):
+    """FastICA contrast G(u) = -exp(-a u^2/2)/a: returns G'(u) and the mean of G''(u), as FastICA expects"""
+
+    def g(u):
+        e = np.exp(-a * u**2 / 2)
+        return u * e, ((1 - a * u**2) * e).mean(axis=-1)
+
+    return g
+
+
+def negentropy(s, bw=0.05):
+    """negentropy of a 1D sample from its histogram (in units of its standard deviation)"""
+    s = (s - s.mean()) / s.std()
+    h, _ = np.histogram(s, bins=np.arange(-8, 8, bw), density=True)
+    p = h[h > 0]
+    return 0.5 * np.log(2 * np.pi * np.e) + np.sum(p * np.log(p)) * bw
+
+
+def fit_ica(xc):
+    ica = FastICA(fun=narrow_gaussian_contrast(KERNEL_A), whiten="unit-variance", random_state=0, max_iter=2000,
+                  tol=1e-6).fit(xc)
+    W = ica.components_.T  # columns: projection vectors of the two independent components
+    W = W / np.sqrt(abs(np.linalg.det(W)))  # unit determinant: features in ps-like units, as in the 2023 figure
+    k = int(np.argmax([negentropy(xc @ W[:, j]) for j in range(2)]))  # the photon-number component
+    W = W[:, [k, 1 - k]]
+    if np.percentile(xc @ W[:, 0], 99) < -np.percentile(xc @ W[:, 0], 1):  # 1-photon events on the right
+        W[:, 0] = -W[:, 0]
+    return W, ica
 
 
 def main():
@@ -37,13 +66,12 @@ def main():
     mu = {r["db"]: r["mu"] for r in json.loads(open(cfg["table"]).read())["rows"]}
     pts = np.asarray(orjson.loads(open(decode_path(cfg, DB), "rb").read())["hist_data"]["counts"], float)
     centered = pts - pts.mean(axis=0)
-    keep = (np.abs(centered) < 250).all(axis=1)
+    keep = (np.abs(centered) < CROP_PS).all(axis=1)
     xc = centered[keep]
     disp = pts[keep] + display_offset(cfg, DB)
-
-    vec = np.array(json.loads((cfg["root"] / UNMIXING).read_text()))
-    w = (vec / np.sqrt(abs(np.linalg.det(vec)))) @ rotation(ROTATION_DEG)
-    proj = xc @ w
+    W, _ = fit_ica(xc)
+    proj = xc @ W
+    mixing = np.linalg.inv(W)  # rows: directions in (t_A, t_B) along which each component varies
 
     mpl.rcParams.update({"font.size": 10, "axes.linewidth": 0.6, "mathtext.fontset": "dejavusans"})
     fig = plt.figure(figsize=(11, 4))
@@ -53,15 +81,13 @@ def main():
 
     ax1.hist2d(disp[:, 0], disp[:, 1], bins=(np.arange(-400, 300), np.arange(0, 900)), norm=mpl.colors.LogNorm(),
                density=True, cmap="viridis", rasterized=True)
-    # directions of the two unmixing vectors (dotted), through the centre of the data
     c = disp.mean(axis=0)
-    rot90 = np.array([[0, -1], [1, 0]])
-    for col, color in [(0, "red"), (1, "purple")]:
-        d = rot90 @ w[:, col]
-        d = d / np.linalg.norm(d)
+    # lines of constant feature x run along the other component's mixing direction (dotted), and vice versa
+    for row, color in [(1, "red"), (0, "purple")]:
+        d = mixing[row] / np.linalg.norm(mixing[row])
         ax1.plot(c[0] + np.array([-250, 250]) * d[0], c[1] + np.array([-250, 250]) * d[1], color=color, lw=2,
                  ls=":", alpha=0.35)
-    ax1.set_xlim(c[0] - 100, c[0] + 140)  # same window around the data centre as the published figure
+    ax1.set_xlim(c[0] - 100, c[0] + 140)
     ax1.set_ylim(c[1] - 150, c[1] + 240)
     ax1.set_aspect("equal", adjustable="box")
     ax1.set_xlabel(r"$t_A$ (ps)")
@@ -70,24 +96,35 @@ def main():
     for x, y, n in [(40, 190, "1"), (-20, 50, "2"), (-48, -5, "3"), (-62, -36, "4"), (-78, -69, "5+")]:
         ax1.text(c[0] + x, c[1] + y, rf"$\mathbf{{|{n}\rangle}}$", ha="center", va="center", fontsize=12)
 
-    ax2.hist2d(proj[:, 0], proj[:, 1], bins=[np.arange(-300, 300, 1), np.arange(-300, 300, 2)],
+    lo, hi = np.percentile(proj[:, 0], [0.2, 99.8])
+    lo, hi = lo - 0.1 * (hi - lo), hi + 0.05 * (hi - lo)
+    ylo, yhi = np.percentile(proj[:, 1], [0.2, 99.8])
+    # bins much wider than the 1 ps time-tag quantization, so the transformed grid does not alias into stripes
+    ax2.hist2d(proj[:, 0], proj[:, 1], bins=[np.arange(lo, hi, 0.5), np.arange(ylo, yhi, 2.5)],
                norm=mpl.colors.LogNorm(), density=True, cmap="viridis", rasterized=True)
-    ax2.set_xlim(-75, 125)
-    ax2.set_ylim(-100, 100)
+    ax2.set_xlim(lo, hi)
     ax2.set_ylabel("ICA feature space y")
-    hist, edges = np.histogram(proj[:, 0], bins=np.arange(-70, 130, 0.5))
+    hist, edges = np.histogram(proj[:, 0], bins=np.arange(lo, hi, 0.5))
     ax3.plot(edges[:-1], hist, color="black", lw=1.8, alpha=0.4)
     ax3.set_xlabel("ICA feature space x")
     ax3.set_ylabel("counts")
-    for x, y, n in [(88.5, 500, "1"), (22, 1010, "2"), (-7, 1100, "3"), (-22, 1100, "4"), (-39, 700, "5+")]:
-        ax3.text(x, y, rf"$\mathbf{{|{n}\rangle}}$", ha="center", va="center", fontsize=11)
+    # label the five most prominent peaks (photon numbers 5+ ... 1 from left to right)
+    smooth = gaussian_filter1d(hist.astype(float), 2)
+    pk, prop = find_peaks(smooth, prominence=smooth.max() * 0.03)
+    pk = np.sort(pk[np.argsort(-prop["prominences"])][:5])
+    for p, n in zip(pk, LABELS[-len(pk):] if len(pk) < 5 else LABELS):
+        ax3.text(edges[p], smooth[p] * 1.08 + 0.03 * smooth.max(), rf"$\mathbf{{|{n}\rangle}}$", ha="center", va="bottom",
+                 fontsize=11)
+    ax3.set_ylim(0, smooth.max() * 1.3)
     for ax, lab, xy in [(ax1, "a)", (-0.25, 1.08)), (ax2, "b)", (-0.08, 1.19)), (ax3, "c)", (-0.08, 1.05))]:
         ax.text(*xy, lab, transform=ax.transAxes, fontsize=16, va="top")
 
     out = cfg["figs"] / "ICA_component_analysis_light"
     fig.savefig(f"{out}.pdf", dpi=300)
     fig.savefig(f"{out}.png", dpi=110)
-    print(f"-> {out}.pdf")
+    ang = [np.degrees(np.arctan2(m[1], m[0])) % 180 for m in mixing]
+    print(f"mixing directions: photon-number component {ang[0]:.1f} deg, other {ang[1]:.1f} deg; "
+          f"{len(pk)} peaks labelled -> {out}.pdf")
 
 
 if __name__ == "__main__":
