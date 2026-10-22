@@ -141,30 +141,36 @@ def geometry_path(model_path):
     return str(model_path).replace(".json", "_geometry.json")
 
 
-def local_refit(x, geometry, seed=42):
+def local_refit(x, geometry, base_groups, seed=42, min_points=200):
     """refit the components of a rounds-2 axis-grouped model to other detections x (in the model's time frame),
     keeping its ICA bases, |1> cut and valley boundaries: the photon-number groups keep their meaning while the
-    component shapes follow the data (e.g. the preamble of another attenuation). Returns groups as build()."""
+    component shapes follow the data (e.g. the preamble of another attenuation). A group whose interval holds fewer
+    than min_points detections, or receives no component, keeps its components from base_groups (the model, in the
+    static_sim.json format). Returns groups in the same format, ordered by photon number."""
     b1 = Basis(c=geometry["basis1"]["c"], W=geometry["basis1"]["W"])
     b2 = Basis(c=geometry["basis2"]["c"], W=geometry["basis2"]["W"])
-    keep = (np.abs(x - b1.c) < 2 * CROP_PS).all(axis=1)
-    x = x[keep]
+    x = x[(np.abs(x - b1.c) < 2 * CROP_PS).all(axis=1)]
     one = b1.to_z(x)[:, 0] > geometry["cut"]
     edges = geometry["boundaries"]
-    groups = []
-    if one.sum() >= 10 * geometry["n1"]:
+    J = len(edges) + 2
+    out = [None] * J
+    if one.sum() >= min_points:
         m1, c1, w1 = diag_gmm(b1.to_z(x[one]), geometry["n1"], seed)
         m1, c1 = b1.to_x(m1, c1)
-        groups += groups_from((m1, c1, w1 * one.mean()), [set(range(geometry["n1"]))])
+        out[0] = groups_from((m1, c1, w1 * one.mean()), [set(range(geometry["n1"]))])[0]
     z2 = b2.to_z(x[~one])
-    n = int(min(geometry["n"], max(len(edges) + 1, (~one).sum() // 200)))  # fewer components for sparse data
-    mz, cz, w = diag_gmm(z2, n, seed, geometry["sigma_max"])
-    mx, cx = b2.to_x(mz, cz)
-    interval = np.searchsorted(-np.asarray(edges), -mz[:, 0])
-    parts = [set(np.flatnonzero(interval == i)) for i in range(len(edges) + 1)]
-    groups += groups_from((mx, cx, w * (1 - one.mean())), [p for p in parts if p])
-    groups.sort(key=lambda g: g["center_of_mass"][1], reverse=True)
-    return groups
+    n = int(min(geometry["n"], (~one).sum() // min_points))  # fewer components for sparse data
+    if n >= 1:
+        mz, cz, w = diag_gmm(z2, n, seed, geometry["sigma_max"])
+        mx, cx = b2.to_x(mz, cz)
+        interval = np.searchsorted(-np.asarray(edges), -mz[:, 0])
+        counts = np.bincount(np.searchsorted(-np.asarray(edges), -z2[:, 0]), minlength=J - 1)
+        for i in range(J - 1):
+            idx = set(np.flatnonzero(interval == i))
+            if idx and counts[i] >= min_points:
+                out[i + 1] = groups_from((mx, cx, w * (1 - one.mean())), [idx])[0]
+    base = sorted(base_groups, key=lambda g: g["center_of_mass"][1], reverse=True)
+    return [o if o is not None else base[j] for j, o in enumerate(out)]
 
 
 def build(cfg, rounds=2, n=20, n1=3, seed=42, grouping="louvain", sigma_max=None):

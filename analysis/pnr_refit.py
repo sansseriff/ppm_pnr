@@ -182,16 +182,24 @@ def main():
     ap.add_argument("--model", default=None, help="default: <dataset>/inter/static_sim.json")
     ap.add_argument("--db", nargs="*", type=float, default=None, help="default: all attenuations")
     ap.add_argument("--out", default=None, help="default: <dataset>/inter/pnr_refit.json")
+    ap.add_argument("--local", action="store_true",
+                    help="per attenuation, refit the model's components to that attenuation's preamble in the model's "
+                         "ICA bases first (as the decoder does; fair_comparison.calibrate_structured)")
     args = ap.parse_args()
     cfg = get(args.dataset)
     T = cfg["slot_ps"]
     mu_table = {r["db"]: r["mu"] for r in json.loads(open(cfg["table"]).read())["rows"]}
 
-    groups = load_groups(args.model or cfg["model"])
+    model = args.model or cfg["model"]
+    groups = load_groups(model)
     J = len(groups)
     out = {}
     for db in sorted(args.db or cfg["dbs"], reverse=True):
         x, n_missing, n_total = load_events(decode_path(cfg, db), T)
+        if args.local:
+            from analysis.fair_comparison import calibrate_structured
+            pre = np.asarray(orjson.loads(open(decode_path(cfg, db), "rb").read())["gm_data"]["counts"], float)
+            groups = calibrate_structured(pre, model, local=True)[0]
         mu = mu_table[int(db)]
         prior = poisson_pmf(mu, J)[1:]
         span = np.ptp(x, axis=0)

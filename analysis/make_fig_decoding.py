@@ -93,7 +93,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dataset", choices=["10", "20"], required=True)
     ap.add_argument("--recompute", action="store_true", help="ignore cached fair_events_*.npz")
-    ap.add_argument("--model", choices=["decoder", "structured"], default="decoder",
+    ap.add_argument("--model", choices=["decoder", "structured", "local"], default="decoder",
                     help="GMM of the comparison (fair_comparison.py); structured: outputs in <dataset>/figs/ica_gmm/")
     args = ap.parse_args()
     cfg = get(args.dataset)

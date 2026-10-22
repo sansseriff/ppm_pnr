@@ -1,11 +1,10 @@
 """
 Photon-number figures, from pnr_refit.py (photon-number model with fitted cluster weights and timing offset):
 
-  groupings figure (manuscript Fig. 6)
-    a) gaussian components of the photon-number model, coloured by group C_j
-    b) joint slot + photon-number attribution of PPM detections, referenced to the true slot
+  groupings figure (manuscript Fig. 6; the model's components are in Fig. 5a, make_fig_structured_gmm.py)
+    a) joint slot + photon-number attribution of PPM detections, referenced to the true slot
        (grey: copies of the coloured data translated by one slot; dashed: |2> / |3> overlap of adjacent slots)
-    c) the same, only for detections attributed to the correct slot
+    b) the same, only for detections attributed to the correct slot
   statistics figure (manuscript Fig. 7)
     a) / b) measured photon-number fractions M_j (vacuum and attributed photon numbers) vs Poisson P_j(mu),
             log and linear scale
@@ -23,7 +22,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import orjson
-from matplotlib.patches import Ellipse, Patch
+from matplotlib.patches import Ellipse
 
 from analysis import style
 from analysis.datasets import decode_path, get
@@ -32,21 +31,6 @@ from analysis.pnr_refit import joint_attribution, load_groups, load_stream_event
 
 GROUP_COLORS = ["#1f5fa8", "#7b2fd6", "#e8338f", "#f59a45", "#9be05a"]
 labels_for = lambda J: [str(j) for j in range(1, J)] + [f"{J}+"]  # photon numbers of J groups: 1 .. J-1, J+
-
-
-def draw_groups(ax, groups, v, frac):
-    """3-sigma ellipse of every gaussian with opacity min(1, 18 w), as util.plot_gmm in 2023. There w was the
-    weight within the group times Poisson(mu, n); here the Poisson factor is replaced by the fitted fraction of
-    frames with n photons (frac). Returns legend handles."""
-    handles = []
-    for j, g in enumerate(groups):
-        for m, c, w in zip(g["means"] + v, g["covs"], g["weights"] * frac[j]):
-            u, s, _ = np.linalg.svd(c)
-            ax.add_patch(Ellipse(m, 6 * np.sqrt(s[0]), 6 * np.sqrt(s[1]), angle=np.degrees(np.arctan2(u[1, 0], u[0, 0])),
-                                 fill=False, color=GROUP_COLORS[j], lw=2, alpha=min(1, 18 * w)))
-        handles.append(Patch(fill=False, edgecolor=GROUP_COLORS[j], lw=2, label=rf"$C_{{{labels_for(len(groups))[j]}}}$",
-                             alpha=min(1, 18 * g["weights"].max() * frac[j])))  # the label sat on the heaviest one
-    return handles
 
 
 def groupings_figure(cfg):
@@ -67,38 +51,36 @@ def groupings_figure(cfg):
     rel = rel + off
     v = v + off
 
-    fig, axs = plt.subplots(1, 3, figsize=(13, 9))
-    handles = draw_groups(axs[0], groups, v, np.asarray(r["measured_with_vacuum"])[1:])
+    # the model's components are shown in Fig. 5a (make_fig_structured_gmm.py)
+    fig, axs = plt.subplots(1, 2, figsize=(9, 9))
     kw = dict(s=3, rasterized=True)
     for i in range(-3, 4):
         if i:
-            axs[1].scatter(rel[:, 0] + i * T, rel[:, 1] + i * T, color="black", alpha=0.02, **kw)
+            axs[0].scatter(rel[:, 0] + i * T, rel[:, 1] + i * T, color="black", alpha=0.02, **kw)
     for j in range(J):
         sel = num == j
-        axs[1].scatter(rel[sel, 0], rel[sel, 1], color=GROUP_COLORS[j], alpha=0.08, label=rf"$M_{{{labels_for(J)[j]}}}$", **kw)
+        axs[0].scatter(rel[sel, 0], rel[sel, 1], color=GROUP_COLORS[j], alpha=0.08, label=rf"$M_{{{labels_for(J)[j]}}}$", **kw)
         sel &= ok
-        axs[2].scatter(rel[sel, 0], rel[sel, 1], color=GROUP_COLORS[j], alpha=0.08, label=rf"$M_{{C{labels_for(J)[j]}}}$", **kw)
+        axs[1].scatter(rel[sel, 0], rel[sel, 1], color=GROUP_COLORS[j], alpha=0.08, label=rf"$M_{{C{labels_for(J)[j]}}}$", **kw)
 
     if cfg["key"] == "20":
         # |2> events of slot i overlap |3> events of slot i+1 (as marked in the 2023 figure)
-        axs[1].add_patch(Ellipse((-43, 405), 20, 60, angle=-45, fill=False, ls="--", color="black", lw=1.5))
+        axs[0].add_patch(Ellipse((-43, 405), 20, 60, angle=-45, fill=False, ls="--", color="black", lw=1.5))
     if cfg["key"] == "20":
         xlim, ylim = (-150, 50), (235, 600)  # as in the 2023 figure
     else:
         com = np.array([np.average(g["means"], weights=g["weights"], axis=0) for g in groups]) + v
         lo, hi = com.min(axis=0), com.max(axis=0)
         xlim, ylim = (lo[0] - 1.3 * T, hi[0] + 1.3 * T), (lo[1] - 1.3 * T, hi[1] + 1.3 * T)
-    for ax, lab in zip(axs, "abc"):
+    for ax, lab in zip(axs, "ab"):
         ax.set_xlim(*xlim)
         ax.set_ylim(*ylim)
         ax.set_aspect("equal")
         ax.set_xlabel(r"$t_A$ (ps)")
         ax.text(-0.1, 1.06, f"{lab})", transform=ax.transAxes, fontsize=19, va="top")
-        lg = ax.legend(handles=handles if ax is axs[0] else None, numpoints=1, fontsize=14, frameon=False,
-                       loc="lower right")
-        if ax is not axs[0]:
-            for h in lg.legend_handles:
-                h.set_sizes([52]), h.set_alpha(0.6)
+        lg = ax.legend(numpoints=1, fontsize=14, frameon=False, loc="lower right")
+        for h in lg.legend_handles:
+            h.set_sizes([52]), h.set_alpha(0.6)
     axs[0].set_ylabel(r"$t_B$ (ps)")
     style.save(fig, cfg["out"] + f"pnr_resolved_arrival_time_groupings_{cfg['tag']}")
     return dict(slot_accuracy=float(ok.mean()), n=int(len(ok)), mu=r["mu"], shift=r["shift"])

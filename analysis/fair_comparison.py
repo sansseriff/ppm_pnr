@@ -89,13 +89,13 @@ def gmm_logpdf(xy: np.ndarray, gm) -> np.ndarray:
     return logsumexp(comp, axis=1)
 
 
-def structured_gm(decode: Decode, model_path, local=False):
-    """the structured model calibrated on this attenuation's preamble: (gm for gmm_logpdf, calibration info).
-    local: refit the components to this preamble in the model's ICA bases (see the module docstring)"""
-    pre = np.asarray(decode.gm_data.counts, float)
+def calibrate_structured(pre, model_path, local=False):
+    """the structured model calibrated on preamble detections pre: (groups, weights, shift, background fraction).
+    The group weights, a uniform background and the common-mode timing shift are fitted by EM. local: the components
+    are first refitted to pre in the model's ICA bases (ica_gmm.local_refit). groups are in the model's time frame
+    (load_groups format); the shift maps them onto pre."""
     groups = load_groups(model_path)
-    J = len(groups)
-    means, covs, inner_w, label = flatten(groups)
+    means, _, inner_w, _ = flatten(groups)
     span = np.ptp(pre, axis=0)
     bg = -np.log(span[0] * span[1])
     center = np.full(2, (np.median(pre, axis=0) - np.average(means, weights=inner_w, axis=0)).mean())
@@ -103,17 +103,22 @@ def structured_gm(decode: Decode, model_path, local=False):
     pi, v, _ = fit_weights_and_shift(pre, groups, v0, bg)
     if local:
         geometry = json.load(open(geometry_path(model_path)))
-        path = os.path.join(os.path.dirname(model_path), "_local_tmp.json")
-        json.dump(local_refit(pre - v, geometry), open(path, "w"))
+        path = os.path.join(os.path.dirname(model_path), f"_local_tmp_{os.getpid()}.json")
+        json.dump(local_refit(pre - v, geometry, json.load(open(model_path))), open(path, "w"))
         groups = load_groups(path)
         os.remove(path)
-        J = len(groups)
-        means, covs, inner_w, label = flatten(groups)
         pi, dv, _ = fit_weights_and_shift(pre - v, groups, np.zeros(2), bg)
         v = v + dv
-    w = pi[:J] / pi[:J].sum()
+    J = len(groups)
+    return groups, pi[:J] / pi[:J].sum(), v, float(pi[J])
+
+
+def structured_gm(decode: Decode, model_path, local=False):
+    """the structured model calibrated on this attenuation's preamble: (gm for gmm_logpdf, calibration info)"""
+    groups, w, v, bg_frac = calibrate_structured(np.asarray(decode.gm_data.counts, float), model_path, local)
+    means, covs, inner_w, label = flatten(groups)
     gm = SimpleNamespace(means=means + v, covariances=covs, weights=inner_w * w[label])
-    return gm, dict(preamble_weights=w.tolist(), preamble_shift=v.tolist(), preamble_background=float(pi[J]))
+    return gm, dict(preamble_weights=w.tolist(), preamble_shift=v.tolist(), preamble_background=bg_frac)
 
 
 def slope_predict(ev, offset_bins: float, T: float) -> np.ndarray:
