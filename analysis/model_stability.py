@@ -9,21 +9,27 @@ built with N components by
 each with the group weights and timing shift refit and joint slot + photon-number attribution, as in Fig. 6.
 
 usage: uv run python -m analysis.model_stability [--recompute]
+Figure (supplement): per dataset, a) the unconstrained model's components coloured by their Louvain group, b), c) the
+photon-number fractions against the number of components for the two methods.
+
 outputs: <dataset>/inter/ica_gmm/stability_published.json, figs/ica_gmm/model_stability.{pdf,png}
 """
 
 import argparse
 import json
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import orjson
+from matplotlib.patches import Ellipse
 from sklearn.mixture import GaussianMixture
 
 from analysis import style
 from analysis.build_pnr_model import affinity, filter_components, stable_communities
 from analysis.datasets import REPO, decode_path, get
-from analysis.ica_gmm import groups_from
+from analysis.display import display_offset
+from analysis.ica_gmm import groups_from, preamble_points
 from analysis.make_fig_pnr import GROUP_COLORS
 from analysis.pnr_refit import (flatten, fit_weights_and_shift, init_shift_grid, joint_attribution, load_events,
                                 load_groups, load_stream_events, poisson_pmf)
@@ -78,13 +84,63 @@ def published_sweep(cfg, ev, out_dir):
     return rows
 
 
+def fractions_panel(a, rows, mu, title):
+    """photon-number fractions vs number of components, both seeds, with the Poisson values dotted"""
+    J = max(len(r["frac"]) for r in rows)
+    pois = poisson_pmf(mu, J)[1:]
+    pois = pois / pois.sum()
+    labels = LABELS if J == 5 else LABELS[:J - 1] + [f"{J}+"]
+    for j in range(J):
+        for seed, mk in zip(SEEDS, ("o", "s")):
+            sel = [(r["k"], 100 * r["frac"][j]) for r in rows if len(r["frac"]) == J and r["seed"] == seed]
+            if sel:
+                xs, ys = zip(*sorted(sel))
+                a.plot(xs, ys, mk + "-", color=GROUP_COLORS[j], ms=4, lw=1, alpha=0.8,
+                       label=rf"$M_{{{labels[j]}}}$" if seed == SEEDS[0] else None)
+        a.axhline(100 * pois[j], color=GROUP_COLORS[j], ls=":", lw=1)
+    a.set_xscale("log")
+    a.set_xticks([7, 10, 20, 30, 50]), a.set_xticklabels(["7", "10", "20", "30", "50"])
+    a.xaxis.set_minor_formatter(plt.NullFormatter())
+    a.set_ylim(0, 40)
+    a.set_title(title, fontsize=11)
+    a.set_ylabel("fraction of detections (%)")
+    a.set_xlabel("Gaussian components in the model")
+    a.legend(ncol=J, fontsize=9, loc="upper right", frameon=False)
+
+
+def components_panel(a, cfg):
+    """the unconstrained model's components (3-sigma ellipses) coloured by their Louvain group, on the preamble"""
+    groups = load_groups(cfg["model_unconstrained"])
+    off = display_offset(cfg, cfg["model_db"])
+    x = preamble_points(cfg) + off
+    h, xe, ye = np.histogram2d(x[:, 0], x[:, 1], bins=(np.arange(-300, 150), np.arange(150, 900)))
+    a.imshow(np.ma.masked_less_equal(h.T, 0), origin="lower", extent=[xe[0], xe[-1], ye[0], ye[-1]], cmap="viridis",
+             norm=mpl.colors.LogNorm(), alpha=0.5, rasterized=True)
+    J = len(groups)
+    labels = LABELS if J == 5 else LABELS[:J - 1] + [f"{J}+"]
+    for j, g in enumerate(groups):
+        for m, c in zip(g["means"] + off, g["covs"]):
+            u, s_, _ = np.linalg.svd(c)
+            a.add_patch(Ellipse(m, 6 * np.sqrt(s_[0]), 6 * np.sqrt(s_[1]), angle=np.degrees(np.arctan2(u[1, 0], u[0, 0])),
+                                fill=False, edgecolor=GROUP_COLORS[j], lw=1.3, alpha=0.9))
+        a.plot([], [], color=GROUP_COLORS[j], lw=2, label=rf"$C_{{{labels[j]}}}$")
+    c1 = np.average(groups[0]["means"], weights=groups[0]["weights"], axis=0) + off
+    a.set_xlim(c1[0] - 190, c1[0] + 70)
+    a.set_ylim(c1[1] - (430 if cfg["key"] == "10" else 320), c1[1] + 70)
+    a.set_aspect("equal")
+    a.set_xlabel(r"$t_A$ (ps)")
+    a.set_ylabel(r"$t_B$ (ps)")
+    a.legend(fontsize=10, loc="lower right", frameon=False)
+    a.set_title(f"{cfg['tag']}, unconstrained ({sum(len(g['weights']) for g in groups)} comp.)", fontsize=11, loc="right")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--recompute", action="store_true", help="redo the published-method sweep")
     args = ap.parse_args()
     style.apply()
-    fig, axs = plt.subplots(2, 2, figsize=(13, 8.5), sharex=True)
-    for col, key in enumerate(["20", "10"]):
+    fig, axs = plt.subplots(2, 3, figsize=(17, 11), gridspec_kw=dict(width_ratios=[0.8, 1, 1]))
+    for row, key in enumerate(["20", "10"]):
         cfg = get(key)
         d = cfg["inter"] / "ica_gmm"
         cache = d / "stability_published.json"
@@ -93,31 +149,12 @@ def main():
         pub = json.load(open(cache))
         ica = json.load(open(d / "sweep_axis_s5.json"))["results"]
         mu = {r["db"]: r["mu"] for r in json.loads(open(cfg["table"]).read())["rows"]}[cfg["group_db"]]
-        for row, (rows, name, nkey) in enumerate([(pub, "published method", "k"),
-                                                   (ica, "ICA-space model", "k")]):
-            a = axs[row, col]
-            J = max(len(r["frac"]) for r in rows)
-            pois = poisson_pmf(mu, J)[1:]
-            pois = pois / pois.sum()
-            labels = LABELS if J == 5 else LABELS[:J - 1] + [f"{J}+"]
-            for j in range(J):
-                for seed, mk in zip(SEEDS, ("o", "s")):
-                    sel = [(r[nkey], 100 * r["frac"][j]) for r in rows if len(r["frac"]) == J and r["seed"] == seed]
-                    if sel:
-                        xs, ys = zip(*sorted(sel))
-                        a.plot(xs, ys, mk + "-", color=GROUP_COLORS[j], ms=4, lw=1, alpha=0.8,
-                               label=rf"$M_{{{labels[j]}}}$" if seed == SEEDS[0] else None)
-                a.axhline(100 * pois[j], color=GROUP_COLORS[j], ls=":", lw=1)
-            a.set_xscale("log")
-            a.set_xticks([7, 10, 20, 30, 50]), a.set_xticklabels(["7", "10", "20", "30", "50"])
-            a.set_ylim(0, 40)
-            a.set_title(f"{cfg['tag']}, {cfg['group_db']} dB ($\\mu$ = {mu:.2f}): {name}", fontsize=10)
-            a.set_ylabel("fraction of detections (%)")
-            a.xaxis.set_minor_formatter(plt.NullFormatter())
-            a.legend(ncol=J, fontsize=9, loc="upper right", frameon=False)
-        axs[1, col].set_xlabel("gaussian components in the model")
-    fig.suptitle("photon-number fractions vs model size (dotted: Poisson; circles / squares: two GMM seeds)",
-                 fontsize=11)
+        components_panel(axs[row, 0], cfg)
+        fractions_panel(axs[row, 1], pub, mu, f"unconstrained GMM + graph clustering ($\\mu$ = {mu:.2f})")
+        fractions_panel(axs[row, 2], ica, mu, f"photon-number-structured GMM ($\\mu$ = {mu:.2f})")
+    for a, lab in zip(axs.ravel(), "abcdef"):
+        a.text(-0.12, 1.08, f"{lab})", transform=a.transAxes, fontsize=19, va="top")
+    fig.tight_layout()
     out = REPO / "ppm_20ghz" / "figs" / "ica_gmm"
     out.mkdir(parents=True, exist_ok=True)
     style.save(fig, out / "model_stability")
