@@ -1,16 +1,17 @@
 """
-Photon-number attribution with the Poisson-weighted photon-number model, and its timing offset fitted.
+Photon-number attribution with the photon-number model, its cluster weights and timing offset fitted.
 
 The photon-number model (inter/static_sim.json) is a set of groups C_j, j = 1..5+, each a fixed mixture of 2D
-gaussians fit at one attenuation. For every attenuation, as in the 2023 analysis, the group weights are set to
-Poisson(mu, j) at that attenuation's mean photon number mu (the vacuum-fraction estimate, extrapolated at the
-brightest settings: make_fig_decoding.py). What is fitted here, by maximum likelihood (EM), is the one timing
-offset of the model: a shift applied equally to t_A and t_B, replacing the hand-derived offset_correction_*.json
-vectors and the in-sample max_offsets.json of the 2023 notebooks. Each detection is then assigned the most
-probable (slot, photon number) among the three slots nearest the slope estimate, as in the 2023 pnr_caller.
+gaussians fit at one attenuation (the cluster shapes). For every attenuation the relative weights ("heights")
+of the five groups, a weak uniform background, and one timing offset (a shift applied equally to t_A and t_B)
+are fitted by maximum likelihood (expectation-maximization). No Poisson statistics are assumed, so comparing the
+resulting photon-number fractions with Poisson(mu) (Fig. 7) is a test. The offset replaces the hand-derived
+offset_correction_*.json vectors and the in-sample max_offsets.json of the 2023 notebooks. Each detection is
+then assigned the most probable (slot, photon number) among the three slots nearest the slope estimate, as in
+the 2023 pnr_caller.
 
-As a robustness check (notebooks/photon_number_model.ipynb) the script also fits the group weights freely,
-without the Poisson prior, and reports the resulting photon-number fractions and mean photon number.
+Robustness check (notebooks/photon_number_model.ipynb, Supplementary Note 6): the 2023 weighting, group weights
+fixed to Poisson(mu, j) at the measured mu (make_fig_decoding.py) with only the offset fitted.
 
 Needs <dataset>/figs/ppm_decoding_<tag>_table.json (make_fig_decoding.py) for mu.
 
@@ -198,31 +199,32 @@ def main():
         means, _, inner_w, label = flatten(groups)
         center = np.full(2, (np.median(x, axis=0) - np.average(means, weights=inner_w, axis=0)).mean())
         v0 = init_shift_grid(x, groups, center, bg, half_width=600.0, step=5.0)
-        # the 2023 model: Poisson(mu) group weights; only the common-mode timing offset is fitted
-        pi_p, v, ll = fit_weights_and_shift(x, groups, v0, bg, fixed_weights=prior)
+        # cluster weights + background + common-mode timing offset, fitted by EM (no Poisson prior)
+        pi, v, ll = fit_weights_and_shift(x, groups, v0, bg)
+        weights = pi[:J] / pi[:J].sum()
 
         # joint slot + photon-number attribution of every detection (Figs. 6, 7)
         ev = load_stream_events(decode_path(cfg, db), T)
-        slot, num = joint_attribution(ev, groups, prior, v, T)
+        slot, num = joint_attribution(ev, groups, weights, v, T)
         counts = np.bincount(num, minlength=J)
         measured = np.concatenate([[n_missing], counts]) / (n_missing + len(num))
         slot_accuracy = float(np.mean(slot == ev["true"]))
-
-        # robustness check: free group weights (no Poisson prior), same data
-        pi_f, v_f, _ = fit_weights_and_shift(x, groups, v, bg)
-        p_free = pi_f[:J] / pi_f[:J].sum()
+        # mu implied by the fitted weights alone (zero-truncated Poisson), independent of the vacuum fraction
         mus = np.linspace(0.01, 40, 8000)
-        trunc_ll = [np.sum(p_free * np.log(poisson_pmf(m, J)[1:] / poisson_pmf(m, J)[1:].sum() + 1e-300)) for m in mus]
-        _, num_free = joint_attribution(ev, groups, pi_f[:J], v_f, T)
+        trunc_ll = [np.sum(weights * np.log(poisson_pmf(m, J)[1:] / poisson_pmf(m, J)[1:].sum() + 1e-300)) for m in mus]
+
+        # robustness check: the 2023 weighting, Poisson(mu) at the measured mu, with only the offset fitted
+        pi_p, v_p, _ = fit_weights_and_shift(x, groups, v, bg, fixed_weights=prior)
+        slot_p, num_p = joint_attribution(ev, groups, prior, v_p, T)
 
         out[f"{db:.1f}"] = dict(
             n_total=n_total, n_missing=n_missing, n_valid=len(x), mu=mu,
-            mu_vacuum=-math.log(n_missing / n_total),
-            shift=v.tolist(), loglik=ll, background_fraction=float(pi_p[J]),
+            mu_vacuum=-math.log(n_missing / n_total), mu_from_weights=float(mus[int(np.argmax(trunc_ll))]),
+            weights=weights.tolist(), background_fraction=float(pi[J]), shift=v.tolist(), loglik=ll,
             measured_with_vacuum=measured.tolist(), counts=counts.tolist(), slot_accuracy=slot_accuracy,
             poisson=poisson_pmf(mu, J).tolist(),
-            free_weights=p_free.tolist(), free_shift=v_f.tolist(), mu_from_free_weights=float(mus[int(np.argmax(trunc_ll))]),
-            counts_free_weights=np.bincount(num_free, minlength=J).tolist(),
+            poisson_weighted=dict(shift=v_p.tolist(), counts=np.bincount(num_p, minlength=J).tolist(),
+                                  slot_accuracy=float(np.mean(slot_p == ev["true"]))),
         )
         print(f"{db:4.0f} dB  mu={mu:6.3f}  shift={v[0]:+7.2f} ps  slot acc {slot_accuracy:.4f}  "
               f"fractions(1..{J}+)={np.round(counts / counts.sum(), 3).tolist()}", flush=True)

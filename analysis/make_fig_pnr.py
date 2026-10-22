@@ -1,5 +1,5 @@
 """
-Photon-number figures, from pnr_refit.py (Poisson-weighted photon-number model with fitted timing offset):
+Photon-number figures, from pnr_refit.py (photon-number model with fitted cluster weights and timing offset):
 
   groupings figure (manuscript Fig. 6)
     a) gaussian components of the photon-number model, coloured by group C_j
@@ -52,9 +52,8 @@ def groupings_figure(cfg):
     J = len(groups)
     r = json.loads(open(cfg["refit"]).read())[f"{float(cfg['group_db']):.1f}"]
     v = np.asarray(r["shift"])
-    prior = poisson_pmf(r["mu"], J)[1:]
     ev = load_stream_events(decode_path(cfg, cfg["group_db"]), T)
-    slot, num = joint_attribution(ev, groups, prior, v, T)
+    slot, num = joint_attribution(ev, groups, np.asarray(r["weights"]), v, T)
     rel = ev["xy"] - T * ev["true"][:, None]
     ok = slot == ev["true"]
     print(f"{cfg['tag']} {cfg['group_db']} dB: slot accuracy {ok.mean():.4f} on {len(ok)} detections; "

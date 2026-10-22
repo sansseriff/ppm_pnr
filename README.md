@@ -69,7 +69,7 @@ analysis/                  dataset-agnostic scripts, all take --dataset 10|20
   fair_comparison.py       SLOPE vs GMM with cross-validated offsets + McNemar test (supplemental tables)
   make_fig_decoding.py     decoding-performance figure (Fig. 5; 10.75 GHz: supplement)
   build_pnr_model.py       photon-number model (groups of GMM components) from a preamble fit
-  pnr_refit.py             photon-number attribution: Poisson(mu)-weighted model, fitted common-mode timing offset
+  pnr_refit.py             photon-number attribution: fitted cluster weights + common-mode timing offset (EM)
   make_fig_pnr.py          photon-number attribution and statistics figures (Figs. 6, 7; 10.75 GHz: supplement)
   display.py               common (t_A, t_B) display coordinates for all scatter/histogram panels
   make_fig_waveform.py     Fig. 2 (detector waveform, trigger delay)
