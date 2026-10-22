@@ -31,7 +31,7 @@ from analysis.display import offset_for_center
 from analysis.pnr_refit import joint_attribution, load_groups, load_stream_events, poisson_pmf
 
 GROUP_COLORS = ["#1f5fa8", "#7b2fd6", "#e8338f", "#f59a45", "#9be05a"]
-LABELS = ["1", "2", "3", "4", "5+"]
+labels_for = lambda J: [str(j) for j in range(1, J)] + [f"{J}+"]  # photon numbers of J groups: 1 .. J-1, J+
 
 
 def draw_groups(ax, groups, v, frac):
@@ -44,7 +44,7 @@ def draw_groups(ax, groups, v, frac):
             u, s, _ = np.linalg.svd(c)
             ax.add_patch(Ellipse(m, 6 * np.sqrt(s[0]), 6 * np.sqrt(s[1]), angle=np.degrees(np.arctan2(u[1, 0], u[0, 0])),
                                  fill=False, color=GROUP_COLORS[j], lw=2, alpha=min(1, 18 * w)))
-        handles.append(Patch(fill=False, edgecolor=GROUP_COLORS[j], lw=2, label=rf"$C_{{{LABELS[j]}}}$",
+        handles.append(Patch(fill=False, edgecolor=GROUP_COLORS[j], lw=2, label=rf"$C_{{{labels_for(len(groups))[j]}}}$",
                              alpha=min(1, 18 * g["weights"].max() * frac[j])))  # the label sat on the heaviest one
     return handles
 
@@ -75,9 +75,9 @@ def groupings_figure(cfg):
             axs[1].scatter(rel[:, 0] + i * T, rel[:, 1] + i * T, color="black", alpha=0.02, **kw)
     for j in range(J):
         sel = num == j
-        axs[1].scatter(rel[sel, 0], rel[sel, 1], color=GROUP_COLORS[j], alpha=0.08, label=rf"$M_{{{LABELS[j]}}}$", **kw)
+        axs[1].scatter(rel[sel, 0], rel[sel, 1], color=GROUP_COLORS[j], alpha=0.08, label=rf"$M_{{{labels_for(J)[j]}}}$", **kw)
         sel &= ok
-        axs[2].scatter(rel[sel, 0], rel[sel, 1], color=GROUP_COLORS[j], alpha=0.08, label=rf"$M_{{C{LABELS[j]}}}$", **kw)
+        axs[2].scatter(rel[sel, 0], rel[sel, 1], color=GROUP_COLORS[j], alpha=0.08, label=rf"$M_{{C{labels_for(J)[j]}}}$", **kw)
 
     if cfg["key"] == "20":
         # |2> events of slot i overlap |3> events of slot i+1 (as marked in the 2023 figure)
@@ -115,7 +115,7 @@ def statistics_figure(cfg):
     P = np.array([poisson_pmf(m, J) for m in fine])
     colors = ["#222222"] + GROUP_COLORS
     markers = ["o", "D", "^", "s", "<", ">"]
-    names = ["0"] + LABELS
+    names = ["0"] + labels_for(J)
 
     fig, (ax_log, ax_lin) = plt.subplots(1, 2, figsize=(19, 6))
     for ax in (ax_log, ax_lin):
@@ -138,10 +138,16 @@ def statistics_figure(cfg):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dataset", choices=["10", "20"], required=True)
+    ap.add_argument("--model", default=None, help="default: <dataset>/inter/static_sim.json")
+    ap.add_argument("--refit", default=None, help="default: <dataset>/inter/pnr_refit.json")
+    ap.add_argument("--out-dir", default=None, help="default: <dataset>/figs")
     args = ap.parse_args()
     cfg = get(args.dataset)
-    cfg["out"] = str(cfg["figs"]) + os.sep
-    os.makedirs(cfg["figs"], exist_ok=True)
+    cfg["model"] = args.model or cfg["model"]
+    cfg["refit"] = args.refit or cfg["refit"]
+    out_dir = args.out_dir or str(cfg["figs"])
+    cfg["out"] = out_dir + os.sep
+    os.makedirs(out_dir, exist_ok=True)
     style.apply()
     info = groupings_figure(cfg)
     statistics_figure(cfg)
