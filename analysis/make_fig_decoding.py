@@ -68,12 +68,12 @@ def corrected_mu(dbs, mu_vac):
     return mu, extrapolated
 
 
-def canonical_truth(cfg):
+def canonical_truth(cfg, model="decoder"):
     """true symbol of every frame index. Padding events appended by decode_ppm carry true=-1, so
     take the value seen at that frame index in any stream of any file."""
     truth = None
     for db in cfg["dbs"]:
-        _, ev = cached_analysis(cfg, db)
+        _, ev = cached_analysis(cfg, db, model=model)
         if truth is None:
             n = int(ev["frame"].max()) + 1
             truth = np.full(n + 64, -1)
@@ -93,13 +93,17 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dataset", choices=["10", "20"], required=True)
     ap.add_argument("--recompute", action="store_true", help="ignore cached fair_events_*.npz")
+    ap.add_argument("--model", choices=["decoder", "structured"], default="decoder",
+                    help="GMM of the comparison (fair_comparison.py); structured: outputs in <dataset>/figs/ica_gmm/")
     args = ap.parse_args()
     cfg = get(args.dataset)
-    cfg["out"] = str(cfg["figs"] / f"ppm_decoding_{cfg['tag']}")
+    figs = cfg["figs"] if args.model == "decoder" else cfg["figs"] / "ica_gmm"
+    figs.mkdir(parents=True, exist_ok=True)
+    cfg["out"] = str(figs / f"ppm_decoding_{cfg['tag']}")
 
     summaries, events = {}, {}
     for db in cfg["dbs"]:
-        summaries[db], events[db] = cached_analysis(cfg, db, recompute=args.recompute)
+        summaries[db], events[db] = cached_analysis(cfg, db, recompute=args.recompute, model=args.model)
         print(f"{db} dB loaded", flush=True)
     dbs = np.array(cfg["dbs"])
     T = summaries[dbs[0]]["laser_time_ps"]
@@ -163,7 +167,7 @@ def main():
     ax_a.text(-0.12, 1.02, "a)", transform=ax_a.transAxes, fontsize=12, va="top")
 
     # ---- b) decoded images (GMM, stream 0)
-    truth = canonical_truth(cfg)
+    truth = canonical_truth(cfg, args.model)
     for k, (ax, db) in enumerate(zip(ax_b, cfg["image_dbs"])):
         ev = events[db]
         sym = np.full(len(truth), -1)

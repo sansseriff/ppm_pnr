@@ -46,9 +46,11 @@ def preamble_points(cfg):
 class Basis:
     """ICA feature space z = (x - c) W, W with unit determinant (ps-like units), z[:, 0] the photon-number axis"""
 
-    def __init__(self, x):
-        self.c = x.mean(axis=0)
-        self.W, _ = fit_ica(x - self.c)
+    def __init__(self, x=None, c=None, W=None):
+        if x is not None:
+            c = x.mean(axis=0)
+            W, _ = fit_ica(x - c)
+        self.c, self.W = np.asarray(c, float), np.asarray(W, float)
         self.M = np.linalg.inv(self.W)
 
     def to_z(self, x):
@@ -126,6 +128,45 @@ def groups_from(components, parts):
     return out
 
 
+def save_geometry(path, info, n, n1, sigma_max):
+    """the ICA bases, the |1> cut and the valley boundaries of a rounds-2 axis-grouped model (next to the model)"""
+    g = info["_geometry"]
+    json.dump(dict(basis1=dict(c=g["basis1"].c.tolist(), W=g["basis1"].W.tolist()),
+                   basis2=dict(c=g["basis2"].c.tolist(), W=g["basis2"].W.tolist()),
+                   cut=float(g["cut"]), boundaries=info["boundaries"], n=n, n1=n1, sigma_max=sigma_max),
+              open(path, "w"), indent=1)
+
+
+def geometry_path(model_path):
+    return str(model_path).replace(".json", "_geometry.json")
+
+
+def local_refit(x, geometry, seed=42):
+    """refit the components of a rounds-2 axis-grouped model to other detections x (in the model's time frame),
+    keeping its ICA bases, |1> cut and valley boundaries: the photon-number groups keep their meaning while the
+    component shapes follow the data (e.g. the preamble of another attenuation). Returns groups as build()."""
+    b1 = Basis(c=geometry["basis1"]["c"], W=geometry["basis1"]["W"])
+    b2 = Basis(c=geometry["basis2"]["c"], W=geometry["basis2"]["W"])
+    keep = (np.abs(x - b1.c) < 2 * CROP_PS).all(axis=1)
+    x = x[keep]
+    one = b1.to_z(x)[:, 0] > geometry["cut"]
+    edges = geometry["boundaries"]
+    groups = []
+    if one.sum() >= 10 * geometry["n1"]:
+        m1, c1, w1 = diag_gmm(b1.to_z(x[one]), geometry["n1"], seed)
+        m1, c1 = b1.to_x(m1, c1)
+        groups += groups_from((m1, c1, w1 * one.mean()), [set(range(geometry["n1"]))])
+    z2 = b2.to_z(x[~one])
+    n = int(min(geometry["n"], max(len(edges) + 1, (~one).sum() // 200)))  # fewer components for sparse data
+    mz, cz, w = diag_gmm(z2, n, seed, geometry["sigma_max"])
+    mx, cx = b2.to_x(mz, cz)
+    interval = np.searchsorted(-np.asarray(edges), -mz[:, 0])
+    parts = [set(np.flatnonzero(interval == i)) for i in range(len(edges) + 1)]
+    groups += groups_from((mx, cx, w * (1 - one.mean())), [p for p in parts if p])
+    groups.sort(key=lambda g: g["center_of_mass"][1], reverse=True)
+    return groups
+
+
 def build(cfg, rounds=2, n=20, n1=3, seed=42, grouping="louvain", sigma_max=None):
     x = preamble_points(cfg)
     b1 = Basis(x)
@@ -158,6 +199,7 @@ def build(cfg, rounds=2, n=20, n1=3, seed=42, grouping="louvain", sigma_max=None
             parts = [p for p in parts if p]
             info |= dict(boundaries=[float(b) for b in edges], partition_freq=1.0)
         groups = groups_from((m1, c1, w1 * frac1), [set(range(n1))]) + groups_from((mx, cx, w * (1 - frac1)), parts)
+        info["_geometry"] = dict(basis1=b1, basis2=b2, cut=one_photon_split(z[:, 0]), x=x, one=one)
     groups.sort(key=lambda g: g["center_of_mass"][1], reverse=True)
     return groups, info
 
@@ -177,7 +219,9 @@ def main():
     groups, info = build(get(a.dataset), a.rounds, a.n, a.n1, a.seed, a.grouping, a.sigma_max)
     with open(a.out, "w") as f:
         json.dump(groups, f)
-    print(json.dumps(info), " ".join(str(g["gm_photon"]["photon_num_components"]) for g in groups))
+    if a.rounds == 2 and a.grouping == "axis":
+        save_geometry(geometry_path(a.out), info, a.n, a.n1, a.sigma_max)
+    print(json.dumps({k: v for k, v in info.items() if not k.startswith("_")}), " ".join(str(g["gm_photon"]["photon_num_components"]) for g in groups))
 
 
 if __name__ == "__main__":

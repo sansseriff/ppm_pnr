@@ -62,11 +62,18 @@ def get(key: str) -> dict:
         root=root,
         inter=root / "inter",
         figs=root / "figs",
-        model=root / "inter" / "static_sim.json",
-        refit=root / "inter" / "pnr_refit.json",
+        # photon-number model: structured model in the ICA feature space (analysis/ica_gmm.py --rounds 2 --n 20
+        # --sigma-max 5 --grouping axis) and its per-attenuation refit (pnr_refit.py)
+        model=root / "inter" / "ica_gmm" / "model_n20_cap5.json",
+        refit=root / "inter" / "ica_gmm" / "pnr_refit_n20_cap5.json",
+        # the earlier, unconstrained model (full-covariance GMM, KL graph, Louvain; build_pnr_model.py), kept for
+        # the comparison in the supplement
+        model_unconstrained=root / "inter" / "static_sim.json",
+        refit_unconstrained=root / "inter" / "pnr_refit.json",
         fair=root / "inter" / "fair_comparison.json",
         table=root / "figs" / f"ppm_decoding_{cfg['tag']}_table.json",
     )
+    cfg["structured_model"] = cfg["model"]
     return cfg
 
 

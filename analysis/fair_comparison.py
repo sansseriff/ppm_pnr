@@ -10,14 +10,27 @@ Differences from worker.caller():
     to p=0 for all candidates (np.argmax of all-zeros silently picks the -1 bin)
   - significance of GMM vs SLOPE is assessed with an exact McNemar test on the paired decisions
 
-Per-event results are cached in <dataset>/inter/fair_events_<prefix><dB>.npz (used by make_fig_decoding.py).
+GMM models (--model):
+  decoder     the GMM the decoder fitted to this attenuation's preamble (gm_list[cfg["gm_idx"]])
+  structured  the photon-number-structured model (ICA feature space, analysis/ica_gmm.py; cfg["structured_model"])
+              with its group weights, a uniform background and the common-mode timing shift fitted by EM to this
+              attenuation's preamble (slot 0 by construction). The transmitted data, and its true slots, are not
+              used for the calibration.
+  local       the structured model's ICA bases, |1> cut and valley boundaries, with the components refitted to
+              this attenuation's preamble (ica_gmm.local_refit), then weights / background / shift as above.
+              The photon-number groups keep their meaning; the component shapes follow the photon-number
+              distribution of each attenuation, as the decoder's own GMM does.
 
-usage: uv run python -m analysis.fair_comparison --dataset 20   (or 10)   [--recompute]
+Per-event results are cached in <dataset>/inter/fair_events_<model prefix><prefix><dB>.npz (used by
+make_fig_decoding.py).
+
+usage: uv run python -m analysis.fair_comparison --dataset 20   (or 10)   [--model structured] [--recompute]
 """
 
 import argparse
 import json
 import os
+from types import SimpleNamespace
 
 import numpy as np
 import orjson
@@ -26,6 +39,8 @@ from scipy.special import logsumexp
 
 from analysis.datasets import decode_path, get
 from analysis.load_schema import Decode, Result
+from analysis.ica_gmm import geometry_path, local_refit
+from analysis.pnr_refit import fit_weights_and_shift, flatten, init_shift_grid, load_groups
 
 OFFSETS = np.arange(-0.25, 0.25001, 0.0025)  # in units of bins
 CANDIDATES = np.array([-1, 0, 1])  # GMM bins compared relative to the slope estimate
@@ -72,6 +87,33 @@ def gmm_logpdf(xy: np.ndarray, gm) -> np.ndarray:
     maha = np.einsum("nki,kij,nkj->nk", d, inv, d)
     comp = -0.5 * maha - 0.5 * logdet - np.log(2 * np.pi) + np.log(weights)
     return logsumexp(comp, axis=1)
+
+
+def structured_gm(decode: Decode, model_path, local=False):
+    """the structured model calibrated on this attenuation's preamble: (gm for gmm_logpdf, calibration info).
+    local: refit the components to this preamble in the model's ICA bases (see the module docstring)"""
+    pre = np.asarray(decode.gm_data.counts, float)
+    groups = load_groups(model_path)
+    J = len(groups)
+    means, covs, inner_w, label = flatten(groups)
+    span = np.ptp(pre, axis=0)
+    bg = -np.log(span[0] * span[1])
+    center = np.full(2, (np.median(pre, axis=0) - np.average(means, weights=inner_w, axis=0)).mean())
+    v0 = init_shift_grid(pre, groups, center, bg, half_width=600.0, step=5.0)
+    pi, v, _ = fit_weights_and_shift(pre, groups, v0, bg)
+    if local:
+        geometry = json.load(open(geometry_path(model_path)))
+        path = os.path.join(os.path.dirname(model_path), "_local_tmp.json")
+        json.dump(local_refit(pre - v, geometry), open(path, "w"))
+        groups = load_groups(path)
+        os.remove(path)
+        J = len(groups)
+        means, covs, inner_w, label = flatten(groups)
+        pi, dv, _ = fit_weights_and_shift(pre - v, groups, np.zeros(2), bg)
+        v = v + dv
+    w = pi[:J] / pi[:J].sum()
+    gm = SimpleNamespace(means=means + v, covariances=covs, weights=inner_w * w[label])
+    return gm, dict(preamble_weights=w.tolist(), preamble_shift=v.tolist(), preamble_background=float(pi[J]))
 
 
 def slope_predict(ev, offset_bins: float, T: float) -> np.ndarray:
@@ -121,10 +163,16 @@ def bootstrap_reduction(gmm_err, slope_err, n=2000, seed=0):
     return np.percentile(vals, [2.5, 97.5]).tolist()
 
 
-def analyze(decode: Decode, gm_idx: int, laser_time_ps: float | None = None, keep_events: bool = False):
-    """keep_events: also return per-event arrays (under '_events') for plotting; not JSON-serialisable."""
+def analyze(decode: Decode, gm_idx: int, laser_time_ps: float | None = None, keep_events: bool = False,
+            structured_model=None, local=False):
+    """keep_events: also return per-event arrays (under '_events') for plotting; not JSON-serialisable.
+    structured_model: path of a structured model; used instead of the decoder's gm_list[gm_idx]"""
     T = laser_time_ps if laser_time_ps is not None else decode.set_data["laser_time"] * 1e12
-    gm = decode.gm_data.gm_list[gm_idx]
+    calib = {}
+    if structured_model is None:
+        gm = decode.gm_data.gm_list[gm_idx]
+    else:
+        gm, calib = structured_gm(decode, structured_model, local=local)
     ev = event_arrays(decode)
     streams = np.unique(ev["stream"])
 
@@ -191,6 +239,7 @@ def analyze(decode: Decode, gm_idx: int, laser_time_ps: float | None = None, kee
         mcnemar_p=p,
         legacy_gmm_errors=legacy_gmm_err,
         legacy_slope_errors=legacy_slope_err,
+        **calib,
     )
     if keep_events:
         out["_events"] = dict(
@@ -199,17 +248,22 @@ def analyze(decode: Decode, gm_idx: int, laser_time_ps: float | None = None, kee
     return out
 
 
-def cache_path(cfg, db):
-    return os.path.join(cfg["inter"], f"fair_events_{cfg['prefix']}{float(db):.1f}.npz")
+MODEL_PREFIX = dict(decoder="", structured="structured_", local="local_")
 
 
-def cached_analysis(cfg, db, recompute=False):
+def cache_path(cfg, db, model="decoder"):
+    return os.path.join(cfg["inter"], f"fair_events_{MODEL_PREFIX[model]}{cfg['prefix']}{float(db):.1f}.npz")
+
+
+def cached_analysis(cfg, db, recompute=False, model="decoder"):
     """analyze() one attenuation, keeping the per-event arrays; cached as an npz next to the decode file."""
-    cache = cache_path(cfg, db)
+    cache = cache_path(cfg, db, model)
     if os.path.exists(cache) and not recompute:
         z = np.load(cache, allow_pickle=True)
         return z["summary"].item(), {k: z[k] for k in z.files if k != "summary"}
-    r = analyze(load_decode(decode_path(cfg, db)), cfg["gm_idx"], cfg["laser_time_ps"], keep_events=True)
+    r = analyze(load_decode(decode_path(cfg, db)), cfg["gm_idx"], cfg["laser_time_ps"], keep_events=True,
+                structured_model=cfg["structured_model"] if model in ("structured", "local") else None,
+                local=model == "local")
     ev = r.pop("_events")
     arrays = {k: v for k, v in ev.items() if isinstance(v, np.ndarray)}
     r["n_streams"] = int(ev["stream"].max() + 1)
@@ -222,13 +276,15 @@ def main():
     ap.add_argument("--dataset", choices=["10", "20"], required=True)
     ap.add_argument("--db", nargs="*", type=float, default=None, help="default: all attenuations")
     ap.add_argument("--recompute", action="store_true", help="ignore cached fair_events_*.npz")
-    ap.add_argument("--out", default=None, help="default: <dataset>/inter/fair_comparison.json")
+    ap.add_argument("--model", choices=list(MODEL_PREFIX), default="decoder")
+    ap.add_argument("--out", default=None,
+                    help="default: <dataset>/inter/fair_comparison.json (structured: fair_comparison_structured.json)")
     args = ap.parse_args()
     cfg = get(args.dataset)
 
     results = {}
     for db in args.db or cfg["dbs"]:
-        r, _ = cached_analysis(cfg, db, recompute=args.recompute)
+        r, _ = cached_analysis(cfg, db, recompute=args.recompute, model=args.model)
         r = {k: v for k, v in r.items() if k != "n_streams"}
         results[f"{db:.1f}"] = r
         red = f"{100*r['reduction']:.1f}%" if r["reduction"] is not None else "n/a"
@@ -242,7 +298,8 @@ def main():
             flush=True,
         )
 
-    with open(args.out or cfg["fair"], "w") as f:
+    default_out = cfg["fair"] if args.model == "decoder" else cfg["inter"] / f"fair_comparison_{args.model}.json"
+    with open(args.out or default_out, "w") as f:
         json.dump(results, f, indent=1)
 
 
