@@ -93,8 +93,8 @@ def main():
         pub = json.load(open(cache))
         ica = json.load(open(d / "sweep_axis_s5.json"))["results"]
         mu = {r["db"]: r["mu"] for r in json.loads(open(cfg["table"]).read())["rows"]}[cfg["group_db"]]
-        for row, (rows, name, nkey) in enumerate([(pub, "published method (full covariance, Louvain)", "n"),
-                                                   (ica, "ICA space (diagonal, width cap, valley grouping)", "n")]):
+        for row, (rows, name, nkey) in enumerate([(pub, "published method", "k"),
+                                                   (ica, "ICA-space model", "k")]):
             a = axs[row, col]
             J = max(len(r["frac"]) for r in rows)
             pois = poisson_pmf(mu, J)[1:]
@@ -109,12 +109,15 @@ def main():
                                label=rf"$M_{{{labels[j]}}}$" if seed == SEEDS[0] else None)
                 a.axhline(100 * pois[j], color=GROUP_COLORS[j], ls=":", lw=1)
             a.set_xscale("log")
-            a.set_xticks([4, 6, 10, 20, 30, 60]), a.set_xticklabels(["4", "6", "10", "20", "30", "60"])
+            a.set_xticks([7, 10, 20, 30, 50]), a.set_xticklabels(["7", "10", "20", "30", "50"])
             a.set_ylim(0, 40)
             a.set_title(f"{cfg['tag']}, {cfg['group_db']} dB ($\\mu$ = {mu:.2f}): {name}", fontsize=10)
             a.set_ylabel("fraction of detections (%)")
-        axs[1, col].set_xlabel("number of gaussian components N (multi-photon part for the ICA model)")
-        axs[0, col].legend(ncol=5, fontsize=9, loc="upper right", frameon=False)
+            a.xaxis.set_minor_formatter(plt.NullFormatter())
+            a.legend(ncol=J, fontsize=9, loc="upper right", frameon=False)
+        axs[1, col].set_xlabel("gaussian components in the model")
+    fig.suptitle("photon-number fractions vs model size (dotted: Poisson; circles / squares: two GMM seeds)",
+                 fontsize=11)
     out = REPO / "ppm_20ghz" / "figs" / "ica_gmm"
     out.mkdir(parents=True, exist_ok=True)
     style.save(fig, out / "model_stability")
