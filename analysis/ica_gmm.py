@@ -15,6 +15,8 @@ M = W^-1) and written in the static_sim.json format, so pnr_refit.py and make_fi
                 --grouping axis     the valleys of the histogram along the photon-number axis of basis 2 are
                                     the group boundaries; each component goes to the interval holding its mean.
                                     Photon numbers without a valley between them stay in one group.
+  --sigma-max  cap on the component width along the photon-number axis, so that components cannot straddle
+               two photon-number peaks (EM continued from scikit-learn's fit with the clipped variance)
 
 usage: uv run python -m analysis.ica_gmm --dataset 10 --rounds 2 --n 20 --out FILE
 """
@@ -56,9 +58,31 @@ class Basis:
         return means_z @ self.M + self.c, np.einsum("ji,kjl,lm->kim", self.M, covs_z, self.M)
 
 
-def diag_gmm(z, n, seed=42):
+def diag_gmm(z, n, seed=42, sigma_max=None, n_iter=300, tol=1e-7):
+    """diagonal GMM in feature space. sigma_max caps each component's standard deviation along the photon-number
+    axis (z[:, 0]): starting from scikit-learn's fit, EM is continued with the M-step variance along that axis
+    clipped to sigma_max^2, so no component can spread across neighbouring photon-number peaks."""
     gm = GaussianMixture(n_components=n, covariance_type="diag", random_state=seed).fit(z)
-    return gm.means_, np.stack([np.diag(v) for v in gm.covariances_]), gm.weights_
+    m, var, w = gm.means_.copy(), gm.covariances_.copy(), gm.weights_.copy()
+    if sigma_max is not None:
+        var[:, 0] = np.minimum(var[:, 0], sigma_max**2)
+        prev = -np.inf
+        for _ in range(n_iter):
+            lp = (-0.5 * (((z[:, None, :] - m[None]) ** 2) / var[None]).sum(axis=2)
+                  - 0.5 * np.log(var).sum(axis=1)[None] + np.log(w)[None])
+            top = lp.max(axis=1, keepdims=True)
+            ll_n = top[:, 0] + np.log(np.exp(lp - top).sum(axis=1))
+            r = np.exp(lp - ll_n[:, None])
+            nk = r.sum(axis=0) + 1e-12
+            w = nk / len(z)
+            m = (r.T @ z) / nk[:, None]
+            var = (r.T @ z**2) / nk[:, None] - m**2 + 1e-6
+            var[:, 0] = np.minimum(var[:, 0], sigma_max**2)
+            ll = ll_n.mean()
+            if ll - prev < tol:
+                break
+            prev = ll
+    return m, np.stack([np.diag(v) for v in var]), w
 
 
 def one_photon_split(z0):
@@ -102,13 +126,13 @@ def groups_from(components, parts):
     return out
 
 
-def build(cfg, rounds=2, n=20, n1=3, seed=42, grouping="louvain"):
+def build(cfg, rounds=2, n=20, n1=3, seed=42, grouping="louvain", sigma_max=None):
     x = preamble_points(cfg)
     b1 = Basis(x)
     z = b1.to_z(x)
     res = np.arange(0.5, 3.01, 0.05)
     if rounds == 1:
-        mz, cz, w = diag_gmm(z, n, seed)
+        mz, cz, w = diag_gmm(z, n, seed, sigma_max)
         mx, cx = b1.to_x(mz, cz)
         parts, r, f = stable_communities(affinity(mx, cx), 5, res)
         groups = groups_from((mx, cx, w), parts)
@@ -120,7 +144,7 @@ def build(cfg, rounds=2, n=20, n1=3, seed=42, grouping="louvain"):
         m1, c1 = b1.to_x(m1, c1)
         b2 = Basis(x[~one])
         z2 = b2.to_z(x[~one])
-        mz, cz, w = diag_gmm(z2, n, seed)
+        mz, cz, w = diag_gmm(z2, n, seed, sigma_max)
         mx, cx = b2.to_x(mz, cz)
         ang = lambda W: np.degrees(np.arctan2(W[1, 0], W[0, 0])) % 180
         info = dict(one_photon_fraction=float(frac1), projection_angles_deg=[ang(b1.W), ang(b2.W)])
@@ -146,9 +170,11 @@ def main():
     ap.add_argument("--n1", type=int, default=3, help="rounds 2: components of the 1-photon cluster")
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--grouping", choices=["louvain", "axis"], default="louvain")
+    ap.add_argument("--sigma-max", type=float, default=None,
+                    help="cap on each component's standard deviation along the photon-number axis (ICA units)")
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
-    groups, info = build(get(a.dataset), a.rounds, a.n, a.n1, a.seed, a.grouping)
+    groups, info = build(get(a.dataset), a.rounds, a.n, a.n1, a.seed, a.grouping, a.sigma_max)
     with open(a.out, "w") as f:
         json.dump(groups, f)
     print(json.dumps(info), " ".join(str(g["gm_photon"]["photon_num_components"]) for g in groups))

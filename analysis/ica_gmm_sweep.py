@@ -3,8 +3,9 @@ Experimental (branch ica-gmm): N / seed sweep of the ICA-space models of analysi
 published model is (group weights + timing shift refit on the group_db dataset, joint slot + photon-number
 attribution), with photon-number fractions against Poisson.
 
-usage: DS=10 GROUPING=axis uv run python -m analysis.ica_gmm_sweep   (GROUPING: louvain | axis)
-outputs: <dataset>/inter/ica_gmm/  models, sweep_<grouping>.json, sweep_<grouping>.png
+usage: DS=10 GROUPING=axis SIGMA=5 uv run python -m analysis.ica_gmm_sweep   (GROUPING: louvain | axis;
+       SIGMA: cap on the component width along the photon-number axis, "none" for no cap)
+outputs: <dataset>/inter/ica_gmm/  models, sweep_<grouping>_s<SIGMA>.json/.png
 """
 
 import json
@@ -21,6 +22,9 @@ from analysis.pnr_refit import (flatten, fit_weights_and_shift, init_shift_grid,
                                 load_groups, load_stream_events, poisson_pmf)
 
 KEY = os.environ.get("DS", "10"); GROUPING = os.environ.get("GROUPING", "louvain")
+SIGMA = os.environ.get("SIGMA", "none"); SIGMA_MAX = None if SIGMA == "none" else float(SIGMA)
+NS = [int(v) for v in os.environ.get("NS", "8 12 16 20 25 30").split()]
+TAG = f"{GROUPING}_s{SIGMA}"
 cfg = get(KEY); T = cfg["slot_ps"]; db = cfg["group_db"]
 S = cfg["inter"] / "ica_gmm"
 S.mkdir(exist_ok=True)
@@ -43,12 +47,12 @@ def evaluate(path):
     return groups, v, ll, slot == ev["true"], num
 
 
-configs = [(r, n, s) for r in ((1, 2) if GROUPING == "louvain" else (2,)) for n in (8, 12, 16, 20, 25, 30) for s in (42, 7)]
+configs = [(r, n, s) for r in ((1, 2) if GROUPING == "louvain" else (2,)) for n in NS for s in (42, 7)]
 results = []
 for rounds, n, seed in configs:
-    out = f"{S}/{GROUPING}_r{rounds}_n{n}_s{seed}.json"
+    out = f"{S}/{TAG}_r{rounds}_n{n}_seed{seed}.json"
     try:
-        groups, info = build(cfg, rounds, n, 3, seed, GROUPING)
+        groups, info = build(cfg, rounds, n, 3, seed, GROUPING, SIGMA_MAX)
     except RuntimeError as e:
         print(rounds, n, seed, "FAILED", e, flush=True); continue
     json.dump(groups, open(out, "w"))
@@ -59,7 +63,7 @@ for rounds, n, seed in configs:
                         freq=info["partition_freq"], path=out))
     print(f"rounds={rounds} N={n:2d} seed={seed:2d} comps={k:2d}  loglik {ll:9.0f}  slot acc {ok.mean():.4f}  "
           f"fractions {np.round(100 * frac, 1).tolist()}  Poisson {np.round(100 * pois_for(len(groups)), 1).tolist()}  freq {info['partition_freq']:.2f}", flush=True)
-json.dump(dict(results=results), open(f"{S}/sweep_{GROUPING}.json", "w"), indent=1)
+json.dump(dict(results=results), open(f"{S}/sweep_{TAG}.json", "w"), indent=1)
 
 # figure: correct-slot attribution for seed 42, one row per round count
 sel = [r for r in results if r["seed"] == 42]
@@ -79,5 +83,5 @@ for r in sel:
     a.set_title(f"{r['rounds']} ICA round(s), N={r['n']} ({r['k']} comps)\n"
                 + " ".join(f"{100 * f:.0f}" for f in r["frac"]) + " %", fontsize=10)
     a.set_xlim(*lims[0]); a.set_ylim(*lims[1]); a.set_aspect("equal")
-fig.savefig(f"{S}/sweep_{GROUPING}.png", dpi=80, bbox_inches="tight")
-print(f"{S}/sweep_{GROUPING}.png")
+fig.savefig(f"{S}/sweep_{TAG}.png", dpi=80, bbox_inches="tight")
+print(f"{S}/sweep_{TAG}.png")
