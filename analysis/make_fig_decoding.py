@@ -7,8 +7,8 @@ symmetric, cross-validated SLOPE vs GMM comparison in fair_comparison.py.
   b) the transmitted image as decoded (GMM method, one transmission) at three mu
   c, d) (t_A, t_B) of detections referenced to their true slot, coloured by which method decoded them
 
-mu is the mean detected photon number per pulse, fit as mu = A * 10^(-dB/10) to -ln(vacuum fraction)
-over the attenuations where the vacuum fraction is a reliable estimator.
+mu is the mean detected photon number per pulse, -ln(vacuum fraction), with the four brightest settings
+(where the vacuum fraction saturates) extrapolated from the others (corrected_mu)
 
 usage: uv run python -m analysis.make_fig_decoding --dataset 20   (or 10)   [--recompute]
 """
@@ -26,7 +26,7 @@ from analysis.display import display_offset, one_photon_center
 from analysis.fair_comparison import cached_analysis
 
 DEAD_TIME_PS = 250e3  # from the ground-truth params (minimum_dead_time: 250 ns)
-MU_FIT_RANGE = (0.03, 3.0)  # vacuum-fraction mu used for the attenuator-law fit
+N_EXTRAPOLATED, N_EXCLUDED_FROM_FIT = 4, 3  # mu extrapolation at the brightest settings (see corrected_mu)
 P_SIGNIFICANT = 0.01
 
 COLORS = dict(
@@ -41,12 +41,30 @@ COLORS = dict(
 MU_COLORS = ["#2e9e5b", "#1f6fd1", "#f08a24"]
 
 
-def fit_mu(dbs, mu_vac):
-    dbs, mu_vac = np.asarray(dbs, float), np.asarray(mu_vac)
-    sel = (mu_vac > MU_FIT_RANGE[0]) & (mu_vac < MU_FIT_RANGE[1])
-    lin = 10 ** (-dbs / 10)
-    A = np.exp(np.mean(np.log(mu_vac[sel] / lin[sel])))  # least squares in log space
-    return A * lin, A, sel
+def vacuum_mu(summary, ev):
+    """mu = -ln(vacuum fraction) from the first repetition: missing / (missing + correct + incorrect)
+    (the 2023 calculate_mfr; frames with dead-time or extra tags are left out of the denominator)"""
+    n_frames = summary["n_total"] // summary["n_streams"]
+    first = ev["stream"] == 0
+    found = int(np.sum(first & ev["valid"]))
+    missing = n_frames - int(np.sum(first))
+    return -np.log(missing / (missing + found))
+
+
+def corrected_mu(dbs, mu_vac):
+    """the 2023 calculate_corrected_mfr: the vacuum fraction saturates at the brightest settings, so the
+    N_EXTRAPOLATED brightest values are replaced by a straight-line fit of ln(mu) vs attenuation step,
+    fitted to all but the N_EXCLUDED_FROM_FIT brightest settings"""
+    order = np.argsort(dbs)[::-1]  # dimmest first
+    ln_mu = np.log(np.asarray(mu_vac)[order])
+    x = np.arange(len(ln_mu))
+    slope, intercept = np.polyfit(x[:-N_EXCLUDED_FROM_FIT], ln_mu[:-N_EXCLUDED_FROM_FIT], 1)
+    ln_mu[-N_EXTRAPOLATED:] = (slope * x + intercept)[-N_EXTRAPOLATED:]
+    mu = np.empty_like(ln_mu)
+    mu[order] = np.exp(ln_mu)
+    extrapolated = np.zeros(len(mu), bool)
+    extrapolated[order[-N_EXTRAPOLATED:]] = True
+    return mu, extrapolated
 
 
 def canonical_truth(cfg):
@@ -84,8 +102,8 @@ def main():
         print(f"{db} dB loaded", flush=True)
     dbs = np.array(cfg["dbs"])
     T = summaries[dbs[0]]["laser_time_ps"]
-    mu_vac = np.array([summaries[d]["mu_raw"] for d in dbs])
-    mu, A, mu_sel = fit_mu(dbs, mu_vac)
+    mu_vac = np.array([vacuum_mu(summaries[d], events[d]) for d in dbs])
+    mu, mu_extrapolated = corrected_mu(dbs, mu_vac)
     frame_ps = (2 ** cfg["bits"]) * T + DEAD_TIME_PS
     raw_rate = cfg["bits"] / frame_ps * 1e6  # Mbit/s (bits per ps * 1e6)
 
@@ -195,7 +213,7 @@ def main():
     fig.savefig(cfg["out"] + "_light.png", dpi=150)
 
     table = dict(
-        mu_fit_A=A, mu_fit_used_db=dbs[mu_sel].tolist(), raw_rate_mbps=raw_rate,
+        mu_extrapolated_db=dbs[mu_extrapolated].tolist(), raw_rate_mbps=raw_rate,
         rows=[dict(db=int(d), mu=float(m), mu_vacuum=float(mv), n_total=int(nt), n_detected=int(nd),
                    gmm_errors=int(eg), slope_errors=int(es), mcnemar_p=float(p),
                    reduction=(float(1 - eg / es) if es else None), excluded=bool(fl))
@@ -204,7 +222,7 @@ def main():
     )
     with open(cfg["out"] + "_table.json", "w") as f:
         json.dump(table, f, indent=1)
-    print(f"A={A:.4g}  raw rate {raw_rate:.2f} Mbit/s  -> {cfg['out']}_light.pdf")
+    print(f"mu extrapolated at {dbs[mu_extrapolated].tolist()} dB; raw rate {raw_rate:.2f} Mbit/s  -> {cfg['out']}_light.pdf")
 
 
 if __name__ == "__main__":

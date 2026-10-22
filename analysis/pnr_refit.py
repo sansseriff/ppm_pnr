@@ -1,15 +1,18 @@
 """
-Photon-number statistics without a Poisson prior, and without hand-tuned alignment offsets.
+Photon-number attribution with the Poisson-weighted photon-number model, and its timing offset fitted.
 
-The photon-number model (inter/static_sim.json) is a set of groups C_j, j = 1..5+, each a fixed
-mixture of 2D gaussians fit at a single attenuation. For every attenuation we fit only
-  - the mixing weights pi_j of the groups (plus a weak uniform background for dark counts), and
-  - one shared 2D shift v of the whole model (replaces offset_correction_*.json and its fudge factors)
-by maximum likelihood (EM) on the measured (t_A, t_B) pairs, each referenced to its true PPM slot.
+The photon-number model (inter/static_sim.json) is a set of groups C_j, j = 1..5+, each a fixed mixture of 2D
+gaussians fit at one attenuation. For every attenuation, as in the 2023 analysis, the group weights are set to
+Poisson(mu, j) at that attenuation's mean photon number mu (the vacuum-fraction estimate, extrapolated at the
+brightest settings: make_fig_decoding.py). What is fitted here, by maximum likelihood (EM), is the one timing
+offset of the model: a shift applied equally to t_A and t_B, replacing the hand-derived offset_correction_*.json
+vectors and the in-sample max_offsets.json of the 2023 notebooks. Each detection is then assigned the most
+probable (slot, photon number) among the three slots nearest the slope estimate, as in the 2023 pnr_caller.
 
-The fitted pi_j are an estimate of the detected photon-number distribution that does not assume
-Poisson statistics, so comparing them with Poisson(mu) is a genuine test. For reference the script
-also reports the legacy-style assignment, where the group weights are fixed to Poisson(mu, j).
+As a robustness check (notebooks/photon_number_model.ipynb) the script also fits the group weights freely,
+without the Poisson prior, and reports the resulting photon-number fractions and mean photon number.
+
+Needs <dataset>/figs/ppm_decoding_<tag>_table.json (make_fig_decoding.py) for mu.
 
 usage: uv run python -m analysis.pnr_refit --dataset 20   (or 10)
 """
@@ -82,14 +85,19 @@ def group_loglik(x, groups, v):
     return np.stack([logsumexp(lc[:, label == j], axis=1) for j in range(J)], axis=1)
 
 
-def fit_weights_and_shift(x, groups, v0, bg_logdensity, n_iter=200, tol=1e-9, common_mode=True):
+def fit_weights_and_shift(x, groups, v0, bg_logdensity, n_iter=200, tol=1e-9, common_mode=True, fixed_weights=None):
     """EM for group weights pi (plus background) and a shared shift v of all component means.
+    fixed_weights: relative group weights to keep fixed (e.g. Poisson(mu, j)); only the background fraction
+    and the shift are then fitted.
     common_mode: restrict v to s*(1,1). A clock/frame offset delays t_A and t_B equally, while
     t_B - t_A is set by photon number and a fixed cable delay, so only a common-mode shift is physical."""
     means, covs, inner_w, label = flatten(groups)
     inv = np.linalg.inv(covs)
     J = len(groups)
     pi = np.full(J + 1, 1.0 / (J + 1))
+    if fixed_weights is not None:
+        fixed = np.asarray(fixed_weights, float) / np.sum(fixed_weights)
+        pi = np.append(0.99 * fixed, 0.01)
     v = np.asarray(v0, float)
     prev = -np.inf
     for _ in range(n_iter):
@@ -100,7 +108,11 @@ def fit_weights_and_shift(x, groups, v0, bg_logdensity, n_iter=200, tol=1e-9, co
         ll = norm.sum()
         r = np.exp(lall - norm)  # (N, K+1)
         rc = r[:, :-1]
-        pi = np.array([rc[:, label == j].sum() for j in range(J)] + [r[:, -1].sum()]) / len(x)
+        if fixed_weights is None:
+            pi = np.array([rc[:, label == j].sum() for j in range(J)] + [r[:, -1].sum()]) / len(x)
+        else:
+            f_bg = r[:, -1].sum() / len(x)
+            pi = np.append((1 - f_bg) * fixed, f_bg)
         # closed-form M-step for a shift shared by all components
         A = np.einsum("nk,kij->ij", rc, inv)
         b = np.einsum("nk,kij,nkj->i", rc, inv, x[:, None, :] - means[None])
@@ -138,73 +150,82 @@ def poisson_pmf(mu, J):
     return np.array(p + [1 - sum(p)])  # last entry is J+ (k >= J)
 
 
+def load_stream_events(path, T):
+    """valid detections with their repetition, slope-estimated slot and true slot"""
+    d = orjson.loads(open(path, "rb").read())
+    rows = [(si, e["tag_x"], e["tag_y"], e["true"], e["measured"])
+            for si, stream in enumerate(d["results"]) for e in stream if e["result"] in VALID]
+    a = np.array(rows, float)
+    return dict(stream=a[:, 0].astype(int), xy=a[:, 1:3], true=a[:, 3].astype(int), measured=a[:, 4].astype(int))
+
+
+def joint_attribution(ev, groups, weights, v, T):
+    """most probable (slot, photon number) over the slots slope-estimate + {-1, 0, 1} (2023 pnr_caller)"""
+    J = len(groups)
+    best = np.full(len(ev["true"]), -np.inf)
+    slot = np.zeros(len(ev["true"]), int)
+    num = np.zeros(len(ev["true"]), int)
+    for k in (-1, 0, 1):
+        s = ev["measured"] + k
+        lg = group_loglik(ev["xy"] - T * s[:, None], groups, v) + np.log(np.maximum(weights, 1e-300))
+        j = np.argmax(lg, axis=1)
+        sc = lg[np.arange(len(j)), j]
+        upd = sc > best
+        best[upd], slot[upd], num[upd] = sc[upd], s[upd], j[upd]
+    return slot, num
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dataset", choices=["10", "20"], required=True)
     ap.add_argument("--model", default=None, help="default: <dataset>/inter/static_sim.json")
     ap.add_argument("--db", nargs="*", type=float, default=None, help="default: all attenuations")
-    ap.add_argument("--free-shift", action="store_true", help="allow a general 2D shift (not physical)")
     ap.add_argument("--out", default=None, help="default: <dataset>/inter/pnr_refit.json")
     args = ap.parse_args()
     cfg = get(args.dataset)
+    T = cfg["slot_ps"]
+    mu_table = {r["db"]: r["mu"] for r in json.loads(open(cfg["table"]).read())["rows"]}
 
     groups = load_groups(args.model or cfg["model"])
     J = len(groups)
     out = {}
     for db in sorted(args.db or cfg["dbs"], reverse=True):
-        x, n_missing, n_total = load_events(decode_path(cfg, db), cfg["slot_ps"])
-        mu_vac = -math.log(n_missing / n_total)
-        # background: uniform over the bounding box of the data
+        x, n_missing, n_total = load_events(decode_path(cfg, db), T)
+        mu = mu_table[int(db)]
+        prior = poisson_pmf(mu, J)[1:]
         span = np.ptp(x, axis=0)
-        bg = -np.log(span[0] * span[1])
-        # initial shift: align the data median with the model's overall centroid, then refine on a grid
+        bg = -np.log(span[0] * span[1])  # background: uniform over the bounding box of the data
         means, _, inner_w, label = flatten(groups)
-        center = np.median(x, axis=0) - np.average(means, weights=inner_w, axis=0)
-        if not args.free_shift:
-            center = np.full(2, center.mean())
-        v0 = init_shift_grid(x, groups, center, bg, half_width=600.0, step=5.0, common_mode=not args.free_shift)
-        pi, v, ll = fit_weights_and_shift(x, groups, v0, bg, common_mode=not args.free_shift)
+        center = np.full(2, (np.median(x, axis=0) - np.average(means, weights=inner_w, axis=0)).mean())
+        v0 = init_shift_grid(x, groups, center, bg, half_width=600.0, step=5.0)
+        # the 2023 model: Poisson(mu) group weights; only the common-mode timing offset is fitted
+        pi_p, v, ll = fit_weights_and_shift(x, groups, v0, bg, fixed_weights=prior)
 
-        # detected photon-number distribution (conditional on >= 1 photon), from the fit
-        p_det = pi[:J] / pi[:J].sum()
-        n_det = len(x) * pi[:J].sum()
-        # full distribution including vacuum, normalised to all frames
-        measured = np.concatenate([[n_missing], p_det * n_det]) / (n_missing + n_det)
+        # joint slot + photon-number attribution of every detection (Figs. 6, 7)
+        ev = load_stream_events(decode_path(cfg, db), T)
+        slot, num = joint_attribution(ev, groups, prior, v, T)
+        counts = np.bincount(num, minlength=J)
+        measured = np.concatenate([[n_missing], counts]) / (n_missing + len(num))
+        slot_accuracy = float(np.mean(slot == ev["true"]))
 
-        # mu from the photon-number distribution alone (ML fit of a zero-truncated Poisson)
+        # robustness check: free group weights (no Poisson prior), same data
+        pi_f, v_f, _ = fit_weights_and_shift(x, groups, v, bg)
+        p_free = pi_f[:J] / pi_f[:J].sum()
         mus = np.linspace(0.01, 40, 8000)
-        k = np.arange(1, J + 1)
-        def trunc_ll(mu):
-            p = poisson_pmf(mu, J)[1:]
-            return np.sum(p_det * np.log(p / p.sum() + 1e-300))
-        mu_pnr = float(mus[np.argmax([trunc_ll(m) for m in mus])])
-
-        # legacy-style hard assignment with Poisson(mu_vac) group weights, for comparison
-        lg = group_loglik(x, groups, v)
-        prior = poisson_pmf(mu_vac, J)[1:]
-        hard_prior = np.bincount(np.argmax(lg + np.log(prior + 1e-300), axis=1), minlength=J)
-        hard_free = np.bincount(np.argmax(lg + np.log(pi[:J] + 1e-300), axis=1), minlength=J)
+        trunc_ll = [np.sum(p_free * np.log(poisson_pmf(m, J)[1:] / poisson_pmf(m, J)[1:].sum() + 1e-300)) for m in mus]
+        _, num_free = joint_attribution(ev, groups, pi_f[:J], v_f, T)
 
         out[f"{db:.1f}"] = dict(
-            n_total=n_total,
-            n_missing=n_missing,
-            n_valid=len(x),
-            mu_vacuum=mu_vac,
-            mu_pnr=mu_pnr,
-            pi=pi.tolist(),
-            shift=v.tolist(),
-            loglik=ll,
-            measured_with_vacuum=measured.tolist(),
-            poisson_mu_vacuum=poisson_pmf(mu_vac, J).tolist(),
-            hard_counts_free_weights=hard_free.tolist(),
-            hard_counts_poisson_prior=hard_prior.tolist(),
+            n_total=n_total, n_missing=n_missing, n_valid=len(x), mu=mu,
+            mu_vacuum=-math.log(n_missing / n_total),
+            shift=v.tolist(), loglik=ll, background_fraction=float(pi_p[J]),
+            measured_with_vacuum=measured.tolist(), counts=counts.tolist(), slot_accuracy=slot_accuracy,
+            poisson=poisson_pmf(mu, J).tolist(),
+            free_weights=p_free.tolist(), free_shift=v_f.tolist(), mu_from_free_weights=float(mus[int(np.argmax(trunc_ll))]),
+            counts_free_weights=np.bincount(num_free, minlength=J).tolist(),
         )
-        print(
-            f"{db:4.0f} dB  mu_vac={mu_vac:6.3f}  mu_pnr={mu_pnr:6.3f}  "
-            f"shift=({v[0]:+7.2f},{v[1]:+7.2f})  bg={pi[J]:.4f}  "
-            f"p_det(1..{J}+)={np.round(p_det, 3).tolist()}",
-            flush=True,
-        )
+        print(f"{db:4.0f} dB  mu={mu:6.3f}  shift={v[0]:+7.2f} ps  slot acc {slot_accuracy:.4f}  "
+              f"fractions(1..{J}+)={np.round(counts / counts.sum(), 3).tolist()}", flush=True)
 
     with open(args.out or cfg["refit"], "w") as f:
         json.dump(out, f, indent=1)
